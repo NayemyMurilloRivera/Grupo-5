@@ -51,6 +51,7 @@ CREATE TABLE sis_god."PERMISO" (
     CONSTRAINT ck_permiso_alcance CHECK (alcance IN ('global', 'propio', 'asignado'))
 );
 
+
 CREATE TABLE sis_god."ESPECIALIDAD" (
     id_especialidad BIGINT GENERATED ALWAYS AS IDENTITY,
     nombre VARCHAR(100) NOT NULL,
@@ -88,6 +89,7 @@ CREATE TABLE sis_god."PROVEEDOR" (
     CONSTRAINT ck_proveedor_ruc CHECK (ruc ~ '^[0-9]{11}$')
 );
 COMMIT;
+
 
 INSERT INTO sis_god."ROL" (nombre) VALUES
     ('Administrador'), ('Recepcionista'), ('Odontólogo'),
