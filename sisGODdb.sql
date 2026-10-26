@@ -51,8 +51,6 @@ CREATE TABLE sis_god."PERMISO" (
     CONSTRAINT ck_permiso_alcance CHECK (alcance IN ('global', 'propio', 'asignado'))
 );
 
-
-BEGIN;
 CREATE TABLE sis_god."ESPECIALIDAD" (
     id_especialidad BIGINT GENERATED ALWAYS AS IDENTITY,
     nombre VARCHAR(100) NOT NULL,
