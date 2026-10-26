@@ -168,3 +168,69 @@ BEGIN
 END;
 $$;
 COMMIT;
+
+BEGIN;
+CREATE TABLE sis_god."METODO_PAGO" (
+    id_metodopago BIGINT GENERATED ALWAYS AS IDENTITY,
+    nombre VARCHAR(60) NOT NULL,
+    CONSTRAINT pk_metodo_pago PRIMARY KEY (id_metodopago),
+    CONSTRAINT uq_metodo_pago_nombre UNIQUE (nombre)
+);
+
+CREATE TABLE sis_god."HISTORIA_CLINICA" (
+    id_historia BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha_apertura DATE NOT NULL,
+    observaciones_generales TEXT,
+    id_paciente BIGINT NOT NULL,
+    CONSTRAINT pk_historia_clinica PRIMARY KEY (id_historia),
+    CONSTRAINT uq_historia_paciente UNIQUE (id_paciente),
+    CONSTRAINT fk_historia_paciente FOREIGN KEY (id_paciente)
+        REFERENCES sis_god."PACIENTE" (id_paciente) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE sis_god."CONTACTO" (
+    id_contacto BIGINT GENERATED ALWAYS AS IDENTITY,
+    nombre VARCHAR(150) NOT NULL,
+    parentesco VARCHAR(50) NOT NULL,
+    telefono VARCHAR(25) NOT NULL,
+    id_paciente BIGINT NOT NULL,
+    CONSTRAINT pk_contacto PRIMARY KEY (id_contacto),
+    CONSTRAINT fk_contacto_paciente FOREIGN KEY (id_paciente) REFERENCES sis_god."PACIENTE" (id_paciente)
+);
+
+CREATE TABLE sis_god."ANTECEDENTE" (
+    id_antecedente BIGINT GENERATED ALWAYS AS IDENTITY,
+    tipo VARCHAR(60) NOT NULL,
+    descripcion TEXT NOT NULL,
+    fecha_registro DATE NOT NULL,
+    id_historia BIGINT NOT NULL,
+    CONSTRAINT pk_antecedente PRIMARY KEY (id_antecedente),
+    CONSTRAINT fk_antecedente_historia FOREIGN KEY (id_historia) REFERENCES sis_god."HISTORIA_CLINICA" (id_historia)
+);
+
+-- FK y UNIQUE fijan el maximo 1:1; el trigger exige la historia del paciente.
+CREATE FUNCTION sis_god.validar_paciente_historia() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+DECLARE v_id BIGINT;
+BEGIN
+    FOR v_id IN SELECT DISTINCT x FROM unnest(ARRAY[
+        (to_jsonb(NEW)->>'id_paciente')::BIGINT,
+        (to_jsonb(OLD)->>'id_paciente')::BIGINT]) AS x WHERE x IS NOT NULL
+    LOOP
+        IF EXISTS (SELECT 1 FROM sis_god."PACIENTE" WHERE id_paciente = v_id)
+           AND NOT EXISTS (SELECT 1 FROM sis_god."HISTORIA_CLINICA" WHERE id_paciente = v_id) THEN
+            RAISE EXCEPTION 'El paciente % requiere exactamente una historia clinica', v_id
+                USING ERRCODE = '23514';
+        END IF;
+    END LOOP;
+    RETURN NULL;
+END;
+$$;
+-- Se difiere para registrar paciente e historia en la misma transaccion.
+CREATE CONSTRAINT TRIGGER ct_paciente_historia
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."PACIENTE"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION sis_god.validar_paciente_historia();
+CREATE CONSTRAINT TRIGGER ct_historia_paciente
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."HISTORIA_CLINICA"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION sis_god.validar_paciente_historia();
+COMMIT;
