@@ -639,3 +639,92 @@ FOR EACH ROW EXECUTE FUNCTION sis_god.validar_documento_pago();
 CREATE TRIGGER tr_factura_pago BEFORE INSERT OR UPDATE ON sis_god."FACTURA"
 FOR EACH ROW EXECUTE FUNCTION sis_god.validar_documento_pago();
 COMMIT;
+
+
+
+BEGIN;
+CREATE TABLE sis_god."EJECUCION_PROCEDIMIENTO" (
+    id_ejecucion BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha_hora TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    observaciones TEXT,
+    id_atencion BIGINT NOT NULL,
+    id_procedimiento BIGINT NOT NULL,
+    id_detalleplan BIGINT,
+    CONSTRAINT pk_ejecucion_procedimiento PRIMARY KEY (id_ejecucion),
+    CONSTRAINT fk_ejecucion_atencion FOREIGN KEY (id_atencion) REFERENCES sis_god."ATENCION" (id_atencion),
+    CONSTRAINT fk_ejecucion_procedimiento FOREIGN KEY (id_procedimiento) REFERENCES sis_god."PROCEDIMIENTO" (id_procedimiento),
+    CONSTRAINT fk_ejecucion_detalle FOREIGN KEY (id_detalleplan) REFERENCES sis_god."DETALLE_PLAN" (id_detalleplan)
+);
+
+CREATE TABLE sis_god."MATERIAL_UTILIZADO" (
+    id_usomaterial BIGINT GENERATED ALWAYS AS IDENTITY,
+    cantidad NUMERIC(12,3) NOT NULL,
+    id_ejecucion BIGINT NOT NULL,
+    id_producto BIGINT NOT NULL,
+    CONSTRAINT pk_material_utilizado PRIMARY KEY (id_usomaterial),
+    CONSTRAINT fk_material_ejecucion FOREIGN KEY (id_ejecucion) REFERENCES sis_god."EJECUCION_PROCEDIMIENTO" (id_ejecucion),
+    CONSTRAINT fk_material_producto FOREIGN KEY (id_producto) REFERENCES sis_god."PRODUCTO" (id_producto),
+    CONSTRAINT ck_material_cantidad CHECK (cantidad > 0)
+);
+
+CREATE TABLE sis_god."DETALLE_COMPRA" (
+    id_detallecompra BIGINT GENERATED ALWAYS AS IDENTITY,
+    cantidad NUMERIC(12,3) NOT NULL,
+    costo_unitario NUMERIC(12,2) NOT NULL,
+    lote VARCHAR(60),
+    fecha_vencimiento DATE,
+    id_compra BIGINT NOT NULL,
+    id_producto BIGINT NOT NULL,
+    CONSTRAINT pk_detalle_compra PRIMARY KEY (id_detallecompra),
+    CONSTRAINT fk_dc_compra FOREIGN KEY (id_compra) REFERENCES sis_god."COMPRA" (id_compra),
+    CONSTRAINT fk_dc_producto FOREIGN KEY (id_producto) REFERENCES sis_god."PRODUCTO" (id_producto),
+    CONSTRAINT ck_dc_cantidad CHECK (cantidad > 0),
+    CONSTRAINT ck_dc_costo CHECK (costo_unitario >= 0)
+);
+
+CREATE TABLE sis_god."MOVIMIENTO_INVENTARIO" (
+    id_movimiento BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha_hora TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tipo VARCHAR(10) NOT NULL,
+    motivo VARCHAR(20) NOT NULL,
+    cantidad NUMERIC(12,3) NOT NULL,
+    observaciones TEXT,
+    id_producto BIGINT NOT NULL,
+    id_detallecompra BIGINT,
+    id_usomaterial BIGINT,
+    CONSTRAINT pk_movimiento_inventario PRIMARY KEY (id_movimiento),
+    CONSTRAINT uq_movimiento_detalle UNIQUE (id_detallecompra),
+    CONSTRAINT uq_movimiento_uso UNIQUE (id_usomaterial),
+    CONSTRAINT fk_mov_producto FOREIGN KEY (id_producto) REFERENCES sis_god."PRODUCTO" (id_producto),
+    CONSTRAINT fk_mov_detalle FOREIGN KEY (id_detallecompra) REFERENCES sis_god."DETALLE_COMPRA" (id_detallecompra),
+    CONSTRAINT fk_mov_uso FOREIGN KEY (id_usomaterial) REFERENCES sis_god."MATERIAL_UTILIZADO" (id_usomaterial),
+    CONSTRAINT ck_mov_cantidad CHECK (cantidad > 0),
+    CONSTRAINT ck_mov_tipo CHECK (tipo IN ('entrada', 'salida')),
+    CONSTRAINT ck_mov_motivo CHECK (motivo IN ('compra', 'consumo', 'saldo_inicial', 'perdida', 'vencimiento', 'ajuste')),
+    -- El motivo determina el tipo de movimiento y su unico origen admisible.
+    CONSTRAINT ck_mov_origen CHECK (
+        (motivo = 'compra' AND tipo = 'entrada' AND id_detallecompra IS NOT NULL AND id_usomaterial IS NULL)
+        OR (motivo = 'consumo' AND tipo = 'salida' AND id_usomaterial IS NOT NULL AND id_detallecompra IS NULL)
+        OR (motivo = 'saldo_inicial' AND tipo = 'entrada' AND id_detallecompra IS NULL AND id_usomaterial IS NULL)
+        OR (motivo IN ('perdida', 'vencimiento') AND tipo = 'salida' AND id_detallecompra IS NULL AND id_usomaterial IS NULL)
+        OR (motivo = 'ajuste' AND id_detallecompra IS NULL AND id_usomaterial IS NULL)
+    )
+);
+CREATE CONSTRAINT TRIGGER ct_compra_detalles
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."COMPRA"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION
+sis_god.validar_minimo_hijos('COMPRA', 'DETALLE_COMPRA', 'id_compra', '1');
+CREATE CONSTRAINT TRIGGER ct_detalle_compra_minimo
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."DETALLE_COMPRA"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION
+sis_god.validar_minimo_hijos('COMPRA', 'DETALLE_COMPRA', 'id_compra', '1');
+-- UNIQUE fija el maximo de una salida por uso; el trigger impone el minimo.
+CREATE CONSTRAINT TRIGGER ct_material_salida
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."MATERIAL_UTILIZADO"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION
+sis_god.validar_minimo_hijos('MATERIAL_UTILIZADO', 'MOVIMIENTO_INVENTARIO', 'id_usomaterial', '1');
+CREATE CONSTRAINT TRIGGER ct_movimiento_material
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."MOVIMIENTO_INVENTARIO"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION
+sis_god.validar_minimo_hijos('MATERIAL_UTILIZADO', 'MOVIMIENTO_INVENTARIO', 'id_usomaterial', '1');
+COMMIT;
