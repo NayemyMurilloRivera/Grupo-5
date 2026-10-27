@@ -311,3 +311,67 @@ CREATE CONSTRAINT TRIGGER ct_apoyo_subtipo
 AFTER INSERT OR UPDATE OR DELETE ON sis_god."PERSONAL_APOYO"
 DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION sis_god.validar_subtipo_empleado();
 COMMIT;
+
+
+
+BEGIN;
+CREATE TABLE sis_god."USUARIO" (
+    id_usuario BIGINT GENERATED ALWAYS AS IDENTITY,
+    nombre_acceso VARCHAR(80) NOT NULL,
+    correo VARCHAR(254) NOT NULL,
+    credencial_acceso TEXT NOT NULL,
+    estado VARCHAR(15) NOT NULL DEFAULT 'activo',
+    id_rol BIGINT NOT NULL,
+    id_empleado BIGINT,
+    id_paciente BIGINT,
+    CONSTRAINT pk_usuario PRIMARY KEY (id_usuario),
+    CONSTRAINT uq_usuario_nombre UNIQUE (nombre_acceso),
+    CONSTRAINT uq_usuario_correo UNIQUE (correo),
+    CONSTRAINT uq_usuario_empleado UNIQUE (id_empleado),
+    CONSTRAINT uq_usuario_paciente UNIQUE (id_paciente),
+    CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES sis_god."ROL" (id_rol),
+    CONSTRAINT fk_usuario_empleado FOREIGN KEY (id_empleado) REFERENCES sis_god."EMPLEADO" (id_empleado),
+    CONSTRAINT fk_usuario_paciente FOREIGN KEY (id_paciente) REFERENCES sis_god."PACIENTE" (id_paciente),
+    CONSTRAINT ck_usuario_estado CHECK (estado IN ('activo', 'inactivo')),
+    -- Arco obligatorio: la cuenta pertenece a un empleado o a un paciente.
+    CONSTRAINT ck_usuario_titular CHECK (
+        (id_empleado IS NOT NULL AND id_paciente IS NULL)
+        OR (id_empleado IS NULL AND id_paciente IS NOT NULL)
+    )
+);
+COMMENT ON COLUMN sis_god."USUARIO".credencial_acceso IS
+    'Guardar un hash de contrasena generado por la aplicacion; nunca texto plano.';
+
+CREATE TABLE sis_god."ROL_PERMISO" (
+    id_rolpermiso BIGINT GENERATED ALWAYS AS IDENTITY,
+    id_rol BIGINT NOT NULL,
+    id_permiso BIGINT NOT NULL,
+    CONSTRAINT pk_rol_permiso PRIMARY KEY (id_rolpermiso),
+    CONSTRAINT uq_rol_permiso UNIQUE (id_rol, id_permiso),
+    CONSTRAINT fk_rp_rol FOREIGN KEY (id_rol) REFERENCES sis_god."ROL" (id_rol),
+    CONSTRAINT fk_rp_permiso FOREIGN KEY (id_permiso) REFERENCES sis_god."PERMISO" (id_permiso)
+);
+
+CREATE TABLE sis_god."PRODUCTO" (
+    id_producto BIGINT GENERATED ALWAYS AS IDENTITY,
+    codigo VARCHAR(40) NOT NULL,
+    nombre VARCHAR(150) NOT NULL,
+    unidad_medida VARCHAR(30) NOT NULL,
+    stock_minimo NUMERIC(12,3) NOT NULL DEFAULT 0,
+    id_categoria BIGINT NOT NULL,
+    CONSTRAINT pk_producto PRIMARY KEY (id_producto),
+    CONSTRAINT uq_producto_codigo UNIQUE (codigo),
+    CONSTRAINT fk_producto_categoria FOREIGN KEY (id_categoria) REFERENCES sis_god."CATEGORIA" (id_categoria),
+    CONSTRAINT ck_producto_stock_minimo CHECK (stock_minimo >= 0)
+);
+
+CREATE TABLE sis_god."COMPRA" (
+    id_compra BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha DATE NOT NULL,
+    documento_proveedor VARCHAR(60) NOT NULL,
+    id_proveedor BIGINT NOT NULL,
+    CONSTRAINT pk_compra PRIMARY KEY (id_compra),
+    CONSTRAINT uq_compra_documento UNIQUE (id_proveedor, documento_proveedor),
+    CONSTRAINT fk_compra_proveedor FOREIGN KEY (id_proveedor) REFERENCES sis_god."PROVEEDOR" (id_proveedor)
+);
+COMMIT;
