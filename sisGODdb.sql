@@ -375,3 +375,114 @@ CREATE TABLE sis_god."COMPRA" (
     CONSTRAINT fk_compra_proveedor FOREIGN KEY (id_proveedor) REFERENCES sis_god."PROVEEDOR" (id_proveedor)
 );
 COMMIT;
+
+
+BEGIN;
+
+CREATE TABLE sis_god."CITA" (
+    id_cita BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    motivo TEXT,
+    id_paciente BIGINT NOT NULL,
+    id_odontologo BIGINT NOT NULL,
+    id_consultorio BIGINT NOT NULL,
+    CONSTRAINT pk_cita PRIMARY KEY (id_cita),
+    CONSTRAINT fk_cita_paciente FOREIGN KEY (id_paciente)
+        REFERENCES sis_god."PACIENTE" (id_paciente),
+    CONSTRAINT fk_cita_odontologo FOREIGN KEY (id_odontologo)
+        REFERENCES sis_god."ODONTOLOGO" (id_empleado),
+    CONSTRAINT fk_cita_consultorio FOREIGN KEY (id_consultorio)
+        REFERENCES sis_god."CONSULTORIO" (id_consultorio),
+    CONSTRAINT ck_cita_intervalo CHECK (hora_inicio < hora_fin),
+    CONSTRAINT ck_cita_estado CHECK (estado IN (
+        'pendiente', 'confirmada', 'en_espera',
+        'en_atencion', 'atendida', 'cancelada', 'inasistencia'
+    ))
+);
+
+CREATE TABLE sis_god."PLAN_TRATAMIENTO" (
+    id_plan BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha_creacion DATE NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'propuesto',
+    observaciones TEXT,
+    id_historia BIGINT NOT NULL,
+    id_odontologo BIGINT NOT NULL,
+    CONSTRAINT pk_plan_tratamiento PRIMARY KEY (id_plan),
+    CONSTRAINT fk_plan_historia FOREIGN KEY (id_historia)
+        REFERENCES sis_god."HISTORIA_CLINICA" (id_historia),
+    CONSTRAINT fk_plan_odontologo FOREIGN KEY (id_odontologo)
+        REFERENCES sis_god."ODONTOLOGO" (id_empleado),
+    CONSTRAINT ck_plan_estado CHECK (
+        estado IN ('propuesto', 'en_curso', 'finalizado', 'cancelado')
+    )
+);
+
+CREATE TABLE sis_god."DETALLE_PLAN" (
+    id_detalleplan BIGINT GENERATED ALWAYS AS IDENTITY,
+    orden INTEGER NOT NULL,
+    cantidad NUMERIC(12,3) NOT NULL,
+    precio_acordado NUMERIC(12,2) NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'propuesto',
+    observaciones TEXT,
+    id_plan BIGINT NOT NULL,
+    id_tratamiento BIGINT NOT NULL,
+    CONSTRAINT pk_detalle_plan PRIMARY KEY (id_detalleplan),
+    CONSTRAINT uq_detalle_plan_orden UNIQUE (id_plan, orden),
+    CONSTRAINT fk_dp_plan FOREIGN KEY (id_plan)
+        REFERENCES sis_god."PLAN_TRATAMIENTO" (id_plan),
+    CONSTRAINT fk_dp_tratamiento FOREIGN KEY (id_tratamiento)
+        REFERENCES sis_god."TRATAMIENTO" (id_tratamiento),
+    CONSTRAINT ck_dp_orden CHECK (orden > 0),
+    CONSTRAINT ck_dp_cantidad CHECK (cantidad > 0),
+    CONSTRAINT ck_dp_precio CHECK (precio_acordado >= 0),
+    CONSTRAINT ck_dp_estado CHECK (
+        estado IN ('propuesto', 'en_curso', 'finalizado', 'cancelado')
+    )
+);
+
+CREATE TABLE sis_god."PRESUPUESTO" (
+    id_presupuesto BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha_emision DATE NOT NULL,
+    importe NUMERIC(12,2) NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    id_plan BIGINT NOT NULL,
+    CONSTRAINT pk_presupuesto PRIMARY KEY (id_presupuesto),
+    CONSTRAINT fk_presupuesto_plan FOREIGN KEY (id_plan)
+        REFERENCES sis_god."PLAN_TRATAMIENTO" (id_plan),
+    CONSTRAINT ck_presupuesto_estado CHECK (
+        estado IN ('pendiente', 'aceptado', 'rechazado', 'sustituido')
+    ),
+    CONSTRAINT ck_presupuesto_importe CHECK (
+        importe >= 0 AND (estado <> 'aceptado' OR importe > 0)
+    )
+);
+
+-- Solo permite un presupuesto aceptado por plan.
+CREATE UNIQUE INDEX uq_presupuesto_aceptado
+ON sis_god."PRESUPUESTO" (id_plan)
+WHERE estado = 'aceptado';
+
+-- Validación diferida de al menos un detalle por plan.
+CREATE CONSTRAINT TRIGGER ct_plan_detalles
+AFTER INSERT OR UPDATE OR DELETE
+ON sis_god."PLAN_TRATAMIENTO"
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW
+EXECUTE FUNCTION sis_god.validar_minimo_hijos(
+    'PLAN_TRATAMIENTO', 'DETALLE_PLAN', 'id_plan', '1'
+);
+
+CREATE CONSTRAINT TRIGGER ct_detalle_plan_minimo
+AFTER INSERT OR UPDATE OR DELETE
+ON sis_god."DETALLE_PLAN"
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW
+EXECUTE FUNCTION sis_god.validar_minimo_hijos(
+    'PLAN_TRATAMIENTO', 'DETALLE_PLAN', 'id_plan', '1'
+);
+
+COMMIT;
+
