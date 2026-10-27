@@ -548,3 +548,94 @@ AFTER INSERT OR UPDATE OR DELETE ON sis_god."ESTADO_PIEZA"
 DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION
 sis_god.validar_minimo_hijos('ODONTOGRAMA', 'ESTADO_PIEZA', 'id_odontograma', '32');
 COMMIT;
+
+BEGIN;
+CREATE TABLE sis_god."OBLIGACION" (
+    id_obligacion BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha_emision DATE NOT NULL,
+    importe NUMERIC(12,2) NOT NULL,
+    fecha_vencimiento DATE,
+    id_presupuesto BIGINT NOT NULL,
+    CONSTRAINT pk_obligacion PRIMARY KEY (id_obligacion),
+    CONSTRAINT uq_obligacion_presupuesto UNIQUE (id_presupuesto),
+    CONSTRAINT fk_obligacion_presupuesto FOREIGN KEY (id_presupuesto) REFERENCES sis_god."PRESUPUESTO" (id_presupuesto),
+    CONSTRAINT ck_obligacion_importe CHECK (importe > 0),
+    CONSTRAINT ck_obligacion_vencimiento CHECK (fecha_vencimiento >= fecha_emision)
+);
+
+CREATE TABLE sis_god."PAGO" (
+    id_pago BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha_hora TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    importe NUMERIC(12,2) NOT NULL,
+    referencia VARCHAR(100),
+    id_obligacion BIGINT NOT NULL,
+    id_metodopago BIGINT NOT NULL,
+    CONSTRAINT pk_pago PRIMARY KEY (id_pago),
+    CONSTRAINT fk_pago_obligacion FOREIGN KEY (id_obligacion) REFERENCES sis_god."OBLIGACION" (id_obligacion),
+    CONSTRAINT fk_pago_metodo FOREIGN KEY (id_metodopago) REFERENCES sis_god."METODO_PAGO" (id_metodopago),
+    CONSTRAINT ck_pago_importe CHECK (importe > 0)
+);
+
+-- BOLETA y FACTURA conservan identificadores y numeraciones independientes.
+CREATE TABLE sis_god."BOLETA" (
+    id_boleta BIGINT GENERATED ALWAYS AS IDENTITY,
+    serie VARCHAR(10) NOT NULL,
+    numero BIGINT NOT NULL,
+    fecha_emision DATE NOT NULL,
+    nombre_receptor VARCHAR(200),
+    documento_receptor VARCHAR(30),
+    id_pago BIGINT NOT NULL,
+    CONSTRAINT pk_boleta PRIMARY KEY (id_boleta),
+    CONSTRAINT uq_boleta_numeracion UNIQUE (serie, numero),
+    CONSTRAINT uq_boleta_pago UNIQUE (id_pago),
+    CONSTRAINT fk_boleta_pago FOREIGN KEY (id_pago) REFERENCES sis_god."PAGO" (id_pago),
+    CONSTRAINT ck_boleta_numero CHECK (numero > 0)
+);
+
+CREATE TABLE sis_god."FACTURA" (
+    id_factura BIGINT GENERATED ALWAYS AS IDENTITY,
+    serie VARCHAR(10) NOT NULL,
+    numero BIGINT NOT NULL,
+    fecha_emision DATE NOT NULL,
+    razon_social_receptor VARCHAR(200) NOT NULL,
+    ruc_receptor VARCHAR(11) NOT NULL,
+    id_pago BIGINT NOT NULL,
+    CONSTRAINT pk_factura PRIMARY KEY (id_factura),
+    CONSTRAINT uq_factura_numeracion UNIQUE (serie, numero),
+    CONSTRAINT uq_factura_pago UNIQUE (id_pago),
+    CONSTRAINT fk_factura_pago FOREIGN KEY (id_pago) REFERENCES sis_god."PAGO" (id_pago),
+    CONSTRAINT ck_factura_numero CHECK (numero > 0),
+    CONSTRAINT ck_factura_ruc CHECK (ruc_receptor ~ '^[0-9]{11}$')
+);
+
+-- Evita que un mismo pago tenga una boleta y una factura a la vez.
+CREATE FUNCTION sis_god.validar_documento_pago() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+DECLARE v_fecha DATE;
+BEGIN
+    -- El bloqueo serializa la emision del mismo pago en READ COMMITTED.
+    SELECT fecha_hora::DATE INTO v_fecha FROM sis_god."PAGO"
+        WHERE id_pago = NEW.id_pago FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'No existe el pago %', NEW.id_pago USING ERRCODE = '23503';
+    END IF;
+    IF NEW.fecha_emision < v_fecha THEN
+        RAISE EXCEPTION 'La emision no puede preceder al pago' USING ERRCODE = '23514';
+    END IF;
+    IF TG_TABLE_NAME = 'BOLETA' THEN
+        IF EXISTS (SELECT 1 FROM sis_god."FACTURA" WHERE id_pago = NEW.id_pago) THEN
+            RAISE EXCEPTION 'El pago % ya tiene FACTURA', NEW.id_pago USING ERRCODE = '23514';
+        END IF;
+    ELSE
+        IF EXISTS (SELECT 1 FROM sis_god."BOLETA" WHERE id_pago = NEW.id_pago) THEN
+            RAISE EXCEPTION 'El pago % ya tiene BOLETA', NEW.id_pago USING ERRCODE = '23514';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER tr_boleta_pago BEFORE INSERT OR UPDATE ON sis_god."BOLETA"
+FOR EACH ROW EXECUTE FUNCTION sis_god.validar_documento_pago();
+CREATE TRIGGER tr_factura_pago BEFORE INSERT OR UPDATE ON sis_god."FACTURA"
+FOR EACH ROW EXECUTE FUNCTION sis_god.validar_documento_pago();
+COMMIT;
