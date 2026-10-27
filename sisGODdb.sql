@@ -234,3 +234,80 @@ CREATE CONSTRAINT TRIGGER ct_historia_paciente
 AFTER INSERT OR UPDATE OR DELETE ON sis_god."HISTORIA_CLINICA"
 DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION sis_god.validar_paciente_historia();
 COMMIT;
+
+
+
+BEGIN;
+-- Los subtipos reutilizan la PK de EMPLEADO; no generan otro identificador.
+CREATE TABLE sis_god."ODONTOLOGO" (
+    id_empleado BIGINT NOT NULL,
+    numero_colegiatura VARCHAR(30) NOT NULL,
+    CONSTRAINT pk_odontologo PRIMARY KEY (id_empleado),
+    CONSTRAINT uq_odontologo_colegiatura UNIQUE (numero_colegiatura),
+    CONSTRAINT fk_odontologo_empleado FOREIGN KEY (id_empleado)
+        REFERENCES sis_god."EMPLEADO" (id_empleado) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE sis_god."PERSONAL_APOYO" (
+    id_empleado BIGINT NOT NULL,
+    cargo VARCHAR(100) NOT NULL,
+    CONSTRAINT pk_personal_apoyo PRIMARY KEY (id_empleado),
+    CONSTRAINT fk_apoyo_empleado FOREIGN KEY (id_empleado)
+        REFERENCES sis_god."EMPLEADO" (id_empleado) DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE sis_god."HORARIO" (
+    id_horario BIGINT GENERATED ALWAYS AS IDENTITY,
+    dia_semana SMALLINT NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    id_empleado BIGINT NOT NULL,
+    CONSTRAINT pk_horario PRIMARY KEY (id_horario),
+    CONSTRAINT fk_horario_empleado FOREIGN KEY (id_empleado) REFERENCES sis_god."EMPLEADO" (id_empleado),
+    CONSTRAINT ck_horario_dia CHECK (dia_semana BETWEEN 1 AND 7),
+    CONSTRAINT ck_horario_intervalo CHECK (hora_inicio < hora_fin)
+);
+
+CREATE TABLE sis_god."ODONTOLOGO_ESPECIALIDAD" (
+    id_odontologoespecialidad BIGINT GENERATED ALWAYS AS IDENTITY,
+    id_empleado BIGINT NOT NULL,
+    id_especialidad BIGINT NOT NULL,
+    CONSTRAINT pk_odontologo_especialidad PRIMARY KEY (id_odontologoespecialidad),
+    CONSTRAINT uq_odontologo_especialidad UNIQUE (id_empleado, id_especialidad),
+    CONSTRAINT fk_oe_odontologo FOREIGN KEY (id_empleado) REFERENCES sis_god."ODONTOLOGO" (id_empleado),
+    CONSTRAINT fk_oe_especialidad FOREIGN KEY (id_especialidad) REFERENCES sis_god."ESPECIALIDAD" (id_especialidad)
+);
+
+-- Especializacion total y excluyente: cada empleado tiene un solo subtipo.
+CREATE FUNCTION sis_god.validar_subtipo_empleado() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+DECLARE v_id BIGINT; v_cantidad INTEGER;
+BEGIN
+    FOR v_id IN SELECT DISTINCT x FROM unnest(ARRAY[
+        (to_jsonb(NEW)->>'id_empleado')::BIGINT,
+        (to_jsonb(OLD)->>'id_empleado')::BIGINT]) AS x WHERE x IS NOT NULL
+    LOOP
+        PERFORM 1 FROM sis_god."EMPLEADO" WHERE id_empleado = v_id FOR UPDATE;
+        IF FOUND THEN
+            SELECT (SELECT count(*) FROM sis_god."ODONTOLOGO" WHERE id_empleado = v_id)
+                 + (SELECT count(*) FROM sis_god."PERSONAL_APOYO" WHERE id_empleado = v_id)
+            INTO v_cantidad;
+            IF v_cantidad <> 1 THEN
+                RAISE EXCEPTION 'El empleado % requiere un solo subtipo; encontrados: %', v_id, v_cantidad
+                    USING ERRCODE = '23514';
+            END IF;
+        END IF;
+    END LOOP;
+    RETURN NULL;
+END;
+$$;
+CREATE CONSTRAINT TRIGGER ct_empleado_subtipo
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."EMPLEADO"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION sis_god.validar_subtipo_empleado();
+CREATE CONSTRAINT TRIGGER ct_odontologo_subtipo
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."ODONTOLOGO"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION sis_god.validar_subtipo_empleado();
+CREATE CONSTRAINT TRIGGER ct_apoyo_subtipo
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."PERSONAL_APOYO"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION sis_god.validar_subtipo_empleado();
+COMMIT;
