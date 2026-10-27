@@ -486,3 +486,65 @@ EXECUTE FUNCTION sis_god.validar_minimo_hijos(
 
 COMMIT;
 
+
+
+BEGIN;
+CREATE TABLE sis_god."ATENCION" (
+    id_atencion BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha_hora TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    motivo_consulta TEXT NOT NULL,
+    observaciones TEXT,
+    evolucion TEXT,
+    id_historia BIGINT NOT NULL,
+    id_odontologo BIGINT NOT NULL,
+    id_cita BIGINT NOT NULL,
+    CONSTRAINT pk_atencion PRIMARY KEY (id_atencion),
+    CONSTRAINT uq_atencion_cita UNIQUE (id_cita),
+    CONSTRAINT fk_atencion_historia FOREIGN KEY (id_historia) REFERENCES sis_god."HISTORIA_CLINICA" (id_historia),
+    CONSTRAINT fk_atencion_odontologo FOREIGN KEY (id_odontologo) REFERENCES sis_god."ODONTOLOGO" (id_empleado),
+    CONSTRAINT fk_atencion_cita FOREIGN KEY (id_cita) REFERENCES sis_god."CITA" (id_cita)
+);
+
+CREATE TABLE sis_god."DIAGNOSTICO_ATENCION" (
+    id_diagnosticoatencion BIGINT GENERATED ALWAYS AS IDENTITY,
+    observacion_clinica TEXT,
+    id_atencion BIGINT NOT NULL,
+    id_diagnostico BIGINT NOT NULL,
+    CONSTRAINT pk_diagnostico_atencion PRIMARY KEY (id_diagnosticoatencion),
+    CONSTRAINT uq_diagnostico_atencion UNIQUE (id_atencion, id_diagnostico),
+    CONSTRAINT fk_da_atencion FOREIGN KEY (id_atencion) REFERENCES sis_god."ATENCION" (id_atencion),
+    CONSTRAINT fk_da_diagnostico FOREIGN KEY (id_diagnostico) REFERENCES sis_god."DIAGNOSTICO" (id_diagnostico)
+);
+
+CREATE TABLE sis_god."ODONTOGRAMA" (
+    id_odontograma BIGINT GENERATED ALWAYS AS IDENTITY,
+    fecha_hora TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    observaciones TEXT,
+    id_atencion BIGINT NOT NULL,
+    CONSTRAINT pk_odontograma PRIMARY KEY (id_odontograma),
+    CONSTRAINT uq_odontograma_atencion UNIQUE (id_atencion),
+    CONSTRAINT fk_odontograma_atencion FOREIGN KEY (id_atencion) REFERENCES sis_god."ATENCION" (id_atencion)
+);
+
+CREATE TABLE sis_god."ESTADO_PIEZA" (
+    id_estadopieza BIGINT GENERATED ALWAYS AS IDENTITY,
+    estado VARCHAR(20) NOT NULL,
+    observaciones TEXT,
+    id_odontograma BIGINT NOT NULL,
+    codigo_fdi SMALLINT NOT NULL,
+    CONSTRAINT pk_estado_pieza PRIMARY KEY (id_estadopieza),
+    CONSTRAINT uq_estado_pieza UNIQUE (id_odontograma, codigo_fdi),
+    CONSTRAINT fk_ep_odontograma FOREIGN KEY (id_odontograma) REFERENCES sis_god."ODONTOGRAMA" (id_odontograma),
+    CONSTRAINT fk_ep_pieza FOREIGN KEY (codigo_fdi) REFERENCES sis_god."PIEZA_DENTAL" (codigo_fdi),
+    CONSTRAINT ck_ep_estado CHECK (estado IN ('sano', 'caries', 'restaurado', 'endodoncia', 'ausente'))
+);
+-- El minimo de 32, junto con FDI y UNIQUE, exige exactamente 32 piezas.
+CREATE CONSTRAINT TRIGGER ct_odontograma_piezas
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."ODONTOGRAMA"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION
+sis_god.validar_minimo_hijos('ODONTOGRAMA', 'ESTADO_PIEZA', 'id_odontograma', '32');
+CREATE CONSTRAINT TRIGGER ct_estado_pieza_minimo
+AFTER INSERT OR UPDATE OR DELETE ON sis_god."ESTADO_PIEZA"
+DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION
+sis_god.validar_minimo_hijos('ODONTOGRAMA', 'ESTADO_PIEZA', 'id_odontograma', '32');
+COMMIT;
