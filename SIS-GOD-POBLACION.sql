@@ -50,3 +50,28 @@ FROM datos d;
 
 COMMIT;
 
+BEGIN;
+
+INSERT INTO sis_god."ESPECIALIDAD" (nombre, descripcion) VALUES
+    ('Odontología general', 'Prevención y atención odontológica general.'),
+    ('Ortodoncia', 'Evaluación y tratamiento de la posición dental.'),
+    ('Endodoncia', 'Tratamiento de la pulpa y conductos dentales.'),
+    ('Periodoncia', 'Atención de encías y tejidos de soporte.'),
+    ('Rehabilitación oral', 'Restauración de la función y estructura dental.');
+
+WITH datos (colegiatura, especialidad) AS (
+    VALUES
+        ('PRUEBA-COP-001', 'Odontología general'),
+        ('PRUEBA-COP-002', 'Ortodoncia'),
+        ('PRUEBA-COP-003', 'Endodoncia'),
+        ('PRUEBA-COP-004', 'Periodoncia'),
+        ('PRUEBA-COP-005', 'Rehabilitación oral')
+)
+INSERT INTO sis_god."ODONTOLOGO_ESPECIALIDAD" (id_empleado, id_especialidad)
+SELECT (SELECT o.id_empleado FROM sis_god."ODONTOLOGO" o
+        WHERE o.numero_colegiatura = d.colegiatura),
+    (SELECT e.id_especialidad FROM sis_god."ESPECIALIDAD" e
+        WHERE e.nombre = d.especialidad)
+FROM datos d;
+
+COMMIT;
