@@ -75,3 +75,34 @@ SELECT (SELECT o.id_empleado FROM sis_god."ODONTOLOGO" o
 FROM datos d;
 
 COMMIT;
+
+-- Turno 04 - Esaul
+BEGIN;
+
+INSERT INTO sis_god."CONSULTORIO" (numero, ubicacion) VALUES
+    ('A-01', 'Primer piso'),
+    ('A-02', 'Primer piso'),
+    ('A-03', 'Primer piso'),
+    ('A-04', 'Primer piso'),
+    ('A-05', 'Primer piso');
+
+WITH datos (documento, colegiatura, consultorio) AS (
+    VALUES
+        ('99010001', 'PRUEBA-COP-001', 'A-01'),
+        ('99010002', 'PRUEBA-COP-002', 'A-02'),
+        ('99010003', 'PRUEBA-COP-003', 'A-03'),
+        ('99010004', 'PRUEBA-COP-004', 'A-04'),
+        ('99010005', 'PRUEBA-COP-005', 'A-05')
+)
+INSERT INTO sis_god."CITA" (fecha, hora_inicio, hora_fin, motivo,
+    id_paciente, id_odontologo, id_consultorio)
+SELECT DATE '2026-11-02', TIME '09:00', TIME '09:30', 'Evaluación inicial',
+    (SELECT p.id_paciente FROM sis_god."PACIENTE" p
+        WHERE p.tipo_documento = 'DNI' AND p.numero_documento = d.documento),
+    (SELECT o.id_empleado FROM sis_god."ODONTOLOGO" o
+        WHERE o.numero_colegiatura = d.colegiatura),
+    (SELECT c.id_consultorio FROM sis_god."CONSULTORIO" c
+        WHERE c.numero = d.consultorio)
+FROM datos d;
+
+COMMIT;
