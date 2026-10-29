@@ -728,3 +728,29 @@ AFTER INSERT OR UPDATE OR DELETE ON sis_god."MOVIMIENTO_INVENTARIO"
 DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION
 sis_god.validar_minimo_hijos('MATERIAL_UTILIZADO', 'MOVIMIENTO_INVENTARIO', 'id_usomaterial', '1');
 COMMIT;
+
+INSERT INTO sis_god."EMPLEADO" (tipo_documento, numero_documento,
+    nombres, apellidos, telefono) VALUES
+    ('DNI', '99020001', 'Andrea', 'Ramos Flores', '900200001'),
+    ('DNI', '99020002', 'Luis', 'Medina Paredes', '900200002'),
+    ('DNI', '99020003', 'Sofía', 'Cruz Herrera', '900200003'),
+    ('DNI', '99020004', 'Daniel', 'Ortiz Campos', '900200004'),
+    ('DNI', '99020005', 'Paola', 'Reyes Aguilar', '900200005');
+
+WITH datos (documento, colegiatura) AS (
+    VALUES
+        ('99020001', 'PRUEBA-COP-001'),
+        ('99020002', 'PRUEBA-COP-002'),
+        ('99020003', 'PRUEBA-COP-003'),
+        ('99020004', 'PRUEBA-COP-004'),
+        ('99020005', 'PRUEBA-COP-005')
+)
+INSERT INTO sis_god."ODONTOLOGO" (id_empleado, numero_colegiatura)
+SELECT (SELECT e.id_empleado FROM sis_god."EMPLEADO" e
+        WHERE e.tipo_documento = 'DNI' AND e.numero_documento = d.documento),
+    d.colegiatura
+FROM datos d;
+
+COMMIT;
+
+
