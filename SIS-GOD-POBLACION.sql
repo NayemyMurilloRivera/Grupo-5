@@ -105,3 +105,37 @@ SELECT DATE '2026-11-02', TIME '09:00', TIME '09:30', 'Evaluación inicial',
 FROM datos d;
 
 COMMIT;
+
+BEGIN;
+
+WITH datos (documento, nombre, parentesco, telefono) AS (
+    VALUES
+        ('99010001', 'Elena Ríos Peña', 'Madre', '900300001'),
+        ('99010002', 'Mario Vargas Solís', 'Padre', '900300002'),
+        ('99010003', 'Rosa Vega Marín', 'Madre', '900300003'),
+        ('99010004', 'Ana Soto Vidal', 'Hermana', '900300004'),
+        ('99010005', 'Jorge Castro Paz', 'Hermano', '900300005')
+)
+INSERT INTO sis_god."CONTACTO" (nombre, parentesco, telefono, id_paciente)
+SELECT d.nombre, d.parentesco, d.telefono,
+    (SELECT p.id_paciente FROM sis_god."PACIENTE" p
+        WHERE p.tipo_documento = 'DNI' AND p.numero_documento = d.documento)
+FROM datos d;
+
+WITH datos (documento, tipo, descripcion) AS (
+    VALUES
+        ('99010001', 'Alergias', 'Paciente refiere alergia a penicilina.'),
+        ('99010002', 'Enfermedades', 'Paciente refiere hipertensión en control médico.'),
+        ('99010003', 'Medicación', 'Paciente refiere no utilizar medicación habitual.'),
+        ('99010004', 'Cirugías', 'Paciente refiere apendicectomía previa.'),
+        ('99010005', 'Hábitos', 'Paciente refiere no fumar.')
+)
+INSERT INTO sis_god."ANTECEDENTE" (tipo, descripcion, fecha_registro, id_historia)
+SELECT d.tipo, d.descripcion, DATE '2026-10-29',
+    (SELECT h.id_historia FROM sis_god."HISTORIA_CLINICA" h
+        JOIN sis_god."PACIENTE" p ON p.id_paciente = h.id_paciente
+        WHERE p.tipo_documento = 'DNI' AND p.numero_documento = d.documento)
+FROM datos d;
+
+COMMIT;
+
