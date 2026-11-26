@@ -5,8 +5,10 @@ import test from 'node:test'
 import { createPatient } from '../../../src/application/use-cases/pacientes/createPatient.js'
 import { updatePatient } from '../../../src/application/use-cases/pacientes/updatePatient.js'
 import { deleteContact } from '../../../src/application/use-cases/pacientes/deleteContact.js'
+import { getHistory } from '../../../src/application/use-cases/pacientes/getHistory.js'
+import { createAntecedent } from '../../../src/application/use-cases/pacientes/createAntecedent.js'
 import { getPatient } from '../../../src/application/use-cases/pacientes/getPatient.js'
-import { createPatientInput, updatePatientInput, listPatientsInput, patientId, patientScope } from '../../../src/interfaces/http/validators/pacientes.validator.js'
+import { createPatientInput, createAntecedentInput, updatePatientInput, listPatientsInput, patientId, patientScope } from '../../../src/interfaces/http/validators/pacientes.validator.js'
 
 const isError = (status: number) => (error: unknown) =>
   error instanceof Error && 'status' in error && error.status === status
@@ -93,6 +95,24 @@ test('las modificaciones informan que un paciente no está disponible dentro de 
     { alcance: 'propio', idPaciente: '2' }), isError(404))
   await assert.rejects(deleteContact({ deleteContact: async () => false }, '1', '1',
     { alcance: 'asignado', idEmpleado: '3' }), isError(404))
+})
+
+test('un antecedente valida tipo, descripción y fecha sin aceptar referencias a otra historia', () => {
+  assert.deepEqual(createAntecedentInput({ tipo: ' Alergia ', descripcion: ' Dato de prueba ' }),
+    { tipo: 'Alergia', descripcion: 'Dato de prueba', fecha_registro: null })
+  assert.equal(createAntecedentInput({ tipo: 'Otro', descripcion: 'Dato', fecha_registro: '2024-02-29' }).fecha_registro, '2024-02-29')
+  for (const input of [null, [], {}, { tipo: 'Otro' }, { tipo: 1, descripcion: 'Dato' },
+    { tipo: 'Otro', descripcion: '' }, { tipo: 'x'.repeat(61), descripcion: 'Dato' },
+    { tipo: 'Otro', descripcion: 'x'.repeat(10001) }, { tipo: 'Otro', descripcion: 'Dato', fecha_registro: '2025-02-29' },
+    { tipo: 'Otro', descripcion: 'Dato', id_historia: '2' }, { tipo: 'Otro', descripcion: 'Dato', id_paciente: '2' }]) {
+    assert.throws(() => createAntecedentInput(input), isError(400))
+  }
+})
+
+test('los casos clínicos informan una historia inexistente sin devolver registros ajenos', async () => {
+  await assert.rejects(getHistory({ findHistory: async () => null }, '1', { alcance: 'propio', idPaciente: '2' }), isError(404))
+  await assert.rejects(createAntecedent({ createAntecedent: async () => null }, '1',
+    { tipo: 'Otro', descripcion: 'Dato ficticio', fecha_registro: null }, { alcance: 'asignado', idEmpleado: '3' }), isError(404))
 })
 
 const databaseUrl = process.env.PATIENTS_TEST_DATABASE_URL
@@ -520,6 +540,106 @@ test('gestión de pacientes con PostgreSQL y autorización reales', { skip: !dat
     await changePatient(editablePath + '/contactos/no-es-id', 400, undefined, tokens.admin, 'DELETE')
     await changePatient('/pacientes/9223372036854775807/contactos/1', 404, undefined, tokens.admin, 'DELETE')
     const response = await fetch(base + editablePath, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+    assert.equal(response.status, 401)
+  })
+
+  await t.test('la historia incluye sus datos clínicos y solo los antecedentes vinculados a ella', async () => {
+    const history = await request('/pacientes/' + owner + '/historia', 200, tokens.admin)
+    assert.equal(history.id_paciente, owner); assert.equal(typeof history.id_historia, 'string')
+    assert.equal(history.paciente, 'Lucía Salazar Ríos')
+    const { rows: [stored] } = await pool.query(`SELECT id_historia, fecha_apertura::text, observaciones_generales,
+      cuestionario_complementario FROM sis_god."HISTORIA_CLINICA" WHERE id_paciente=$1`, [owner])
+    assert.equal(history.id_historia, stored.id_historia); assert.equal(history.fecha_apertura, stored.fecha_apertura)
+    assert.equal(history.observaciones_generales, stored.observaciones_generales)
+    assert.deepEqual(history.cuestionario_complementario, stored.cuestionario_complementario)
+    const { rows: records } = await pool.query('SELECT id_antecedente FROM sis_god."ANTECEDENTE" WHERE id_historia=$1', [stored.id_historia])
+    assert.deepEqual(history.antecedentes.map((a: { id_antecedente: string }) => a.id_antecedente).sort(), records.map(row => row.id_antecedente).sort())
+    assert.equal(Object.hasOwn(history, 'contactos'), false); assert.equal(Object.hasOwn(history, 'credencial_acceso'), false)
+  })
+
+  await t.test('una historia sin antecedentes conserva su identidad y devuelve un arreglo vacío', async () => {
+    const large = await request('/pacientes/9007199254740993/historia', 200, tokens.admin)
+    assert.equal(large.id_paciente, '9007199254740993'); assert.notEqual(large.id_historia, large.id_paciente)
+    assert.deepEqual(large.antecedentes, [])
+    assert.equal(large.observaciones_generales, null); assert.deepEqual(large.cuestionario_complementario, {})
+  })
+
+  await t.test('el antecedente se registra en la historia del paciente sin crear o modificar otros registros', async () => {
+    const before = await counts()
+    const current = await request('/pacientes/' + owner + '/historia', 200, tokens.admin)
+    const created = await changePatient('/pacientes/' + owner + '/antecedentes', 201,
+      { tipo: 'Alergia', descripcion: 'Antecedente de prueba', fecha_registro: '2026-01-15' }, tokens.admin, 'POST')
+    assert.equal(created.id_historia, current.id_historia); assert.equal(typeof created.id_antecedente, 'string')
+    assert.equal(created.fecha_registro, '2026-01-15')
+    const after = await counts(); assert.deepEqual(after, { ...before, antecedentes: before.antecedentes + 1 })
+    const updated = await request('/pacientes/' + owner + '/historia', 200, tokens.admin)
+    assert.ok(updated.antecedentes.some((a: { id_antecedente: string }) => a.id_antecedente === created.id_antecedente))
+    assert.equal(updated.observaciones_generales, current.observaciones_generales)
+    const automatic = await changePatient('/pacientes/9007199254740993/antecedentes', 201,
+      { tipo: 'Otro', descripcion: 'Registro con fecha automática' }, tokens.admin, 'POST')
+    assert.equal(automatic.fecha_registro, (await pool.query('SELECT CURRENT_DATE::text AS fecha')).rows[0].fecha)
+    assert.equal(automatic.id_historia, (await request('/pacientes/9007199254740993/historia', 200, tokens.admin)).id_historia)
+  })
+
+  await t.test('el paciente consulta su historia, el odontólogo solo las asignadas y recepción no accede a datos clínicos', async () => {
+    await request('/pacientes/' + owner + '/historia', 200, tokens.paciente)
+    await request('/pacientes/' + other + '/historia', 403, tokens.paciente)
+    await request('/pacientes/' + owner + '/historia', 200, tokens.odontologo)
+    await request('/pacientes/' + other + '/historia', 403, tokens.odontologo)
+    for (const role of ['recepcion', 'asistente', 'sin-asignacion']) await request('/pacientes/' + owner + '/historia', 403, tokens[role])
+    const administrative = await request('/pacientes/' + owner, 200, tokens.recepcion)
+    for (const key of ['observaciones_generales', 'cuestionario_complementario', 'antecedentes']) assert.equal(Object.hasOwn(administrative, key), false)
+  })
+
+  await t.test('solo el clínico autorizado registra antecedentes en sus pacientes asignados', async () => {
+    const path = '/pacientes/' + owner + '/antecedentes'
+    const input = { tipo: 'Otro', descripcion: 'Registrado por odontólogo' }
+    const created = await changePatient(path, 201, input, tokens.odontologo, 'POST')
+    assert.equal(created.tipo, 'Otro')
+    await changePatient('/pacientes/' + other + '/antecedentes', 403, input, tokens.odontologo, 'POST')
+    for (const role of ['paciente', 'recepcion', 'asistente', 'sin-asignacion']) await changePatient(path, 403, input, tokens[role], 'POST')
+    await changePatient(path, 400, { ...input, id_historia: '2' }, tokens.admin, 'POST')
+    const { patientRepository } = await import('../../../src/infrastructure/database/sql/repositories/pacientes.repository.js')
+    assert.equal(await patientRepository.findHistory(other, { alcance: 'propio', idPaciente: owner }), null)
+    assert.equal(await patientRepository.createAntecedent(other, { ...input, fecha_registro: null }, { alcance: 'asignado', idEmpleado: dentist }), null)
+  })
+
+  await t.test('los antecedentes se ordenan por fecha e identificador descendentes sin perder precisión', async () => {
+    const history = await request('/pacientes/' + owner + '/historia', 200, tokens.admin)
+    await pool.query(`INSERT INTO sis_god."ANTECEDENTE" (id_antecedente,tipo,descripcion,fecha_registro,id_historia)
+      OVERRIDING SYSTEM VALUE VALUES (9007199254740993,'Otro','Identificador amplio','2026-01-15',$1)`, [history.id_historia])
+    const result = await request('/pacientes/' + owner + '/historia', 200, tokens.admin)
+    assert.ok(result.antecedentes.some((a: { id_antecedente: string }) => a.id_antecedente === '9007199254740993'))
+    for (let i = 1; i < result.antecedentes.length; i++) {
+      const previous = result.antecedentes[i - 1], current = result.antecedentes[i]
+      assert.ok(previous.fecha_registro > current.fecha_registro ||
+        (previous.fecha_registro === current.fecha_registro && BigInt(previous.id_antecedente) > BigInt(current.id_antecedente)))
+    }
+  })
+
+  await t.test('una falla SQL al registrar el antecedente conserva intacta la historia y las otras tablas', async () => {
+    const before = await counts()
+    const path = '/pacientes/' + owner
+    const history = await request(path + '/historia', 200, tokens.admin)
+    await pool.query(`CREATE FUNCTION sis_god.prueba_antecedente_individual() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Antecedente individual rechazado'; END $$;
+      CREATE TRIGGER prueba_antecedente_individual BEFORE INSERT ON sis_god."ANTECEDENTE"
+      FOR EACH ROW WHEN (NEW.tipo = 'Rechazado') EXECUTE FUNCTION sis_god.prueba_antecedente_individual()`)
+    try {
+      await changePatient(path + '/antecedentes', 500, { tipo: 'Rechazado', descripcion: 'No se debe guardar' }, tokens.admin, 'POST')
+      assert.deepEqual(await counts(), before)
+      assert.deepEqual(await request(path + '/historia', 200, tokens.admin), history)
+    } finally { await pool.query('DROP TRIGGER prueba_antecedente_individual ON sis_god."ANTECEDENTE"; DROP FUNCTION sis_god.prueba_antecedente_individual()') }
+  })
+
+  await t.test('las rutas clínicas rechazan fechas, identificadores y sesiones inválidos', async () => {
+    await request('/pacientes/0/historia', 400, tokens.admin)
+    assert.equal((await request('/pacientes/9223372036854775807/historia', 404, tokens.admin)).error.codigo, 'HISTORIA_NO_EXISTE')
+    await changePatient('/pacientes/9223372036854775807/antecedentes', 404, { tipo: 'Otro', descripcion: 'Dato' }, tokens.admin, 'POST')
+    await changePatient('/pacientes/' + owner + '/antecedentes', 400, { tipo: 'Otro', descripcion: 'Dato', fecha_registro: '2026-02-30' }, tokens.admin, 'POST')
+    await request('/pacientes/' + owner + '/historia', 401)
+    const response = await fetch(base + '/pacientes/' + owner + '/antecedentes', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'Otro', descripcion: 'Dato' }) })
     assert.equal(response.status, 401)
   })
 })

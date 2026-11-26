@@ -97,3 +97,32 @@ SELECT p.id_paciente FROM sis_god."PACIENTE" p
 DELETE FROM sis_god."CONTACTO"
         WHERE id_contacto=$1 AND id_paciente=$2 RETURNING id_contacto;
 COMMIT;
+
+-- Historia: $1 alcance, $2 paciente titular, $3 empleado asignado, $4 paciente consultado.
+SELECT h.id_historia::text, h.id_paciente::text, concat_ws(' ', p.nombres, p.apellidos) AS paciente,
+          h.fecha_apertura::text, h.observaciones_generales, h.cuestionario_complementario,
+          COALESCE((SELECT jsonb_agg(jsonb_build_object('id_antecedente', a.id_antecedente::text,
+            'tipo', a.tipo, 'descripcion', a.descripcion, 'fecha_registro', a.fecha_registro::text)
+            ORDER BY a.fecha_registro DESC, a.id_antecedente DESC)
+            FROM sis_god."ANTECEDENTE" a WHERE a.id_historia=h.id_historia), '[]'::jsonb) AS antecedentes
+        FROM sis_god."PACIENTE" p JOIN sis_god."HISTORIA_CLINICA" h USING (id_paciente)
+        WHERE ($1::text = 'global'
+  OR ($1 = 'propio' AND p.id_paciente = $2::bigint)
+  OR ($1 = 'asignado' AND EXISTS (
+    SELECT 1 FROM sis_god."HISTORIA_CLINICA" h
+    JOIN sis_god."PLAN_TRATAMIENTO" plan USING (id_historia)
+    WHERE h.id_paciente = p.id_paciente AND plan.id_odontologo = $3::bigint
+  ))) AND p.id_paciente=$4::bigint;
+
+-- Antecedente: los mismos $1 a $4; $5 tipo, $6 descripcion, $7 fecha_registro.
+INSERT INTO sis_god."ANTECEDENTE" (tipo, descripcion, fecha_registro, id_historia)
+        SELECT $5::text, $6::text, COALESCE($7::date,CURRENT_DATE), h.id_historia
+        FROM sis_god."PACIENTE" p JOIN sis_god."HISTORIA_CLINICA" h USING (id_paciente)
+        WHERE ($1::text = 'global'
+  OR ($1 = 'propio' AND p.id_paciente = $2::bigint)
+  OR ($1 = 'asignado' AND EXISTS (
+    SELECT 1 FROM sis_god."HISTORIA_CLINICA" h
+    JOIN sis_god."PLAN_TRATAMIENTO" plan USING (id_historia)
+    WHERE h.id_paciente = p.id_paciente AND plan.id_odontologo = $3::bigint
+  ))) AND p.id_paciente=$4::bigint
+        RETURNING id_antecedente::text, id_historia::text, tipo, descripcion, fecha_registro::text;

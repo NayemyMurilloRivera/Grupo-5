@@ -20,3 +20,5 @@ export function knownPatientError(error: unknown): PatientError | undefined {
 }
 
 export const contactNotFound = () => new PatientError(404, 'CONTACTO_NO_EXISTE', 'El contacto no existe o no pertenece al paciente indicado.')
+
+export const historyNotFound = () => new PatientError(404, 'HISTORIA_NO_EXISTE', 'La historia clínica no existe o no está disponible para esta consulta.')

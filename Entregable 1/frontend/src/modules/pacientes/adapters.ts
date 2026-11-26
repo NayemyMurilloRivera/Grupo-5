@@ -7,3 +7,7 @@ export function toRows(response: unknown) {
 }
 
 export const toPayload = (values: Record<string, unknown>) => parseJsonFields(values, [])
+
+export function toHistoryRows(response: unknown) {
+  return responseRows(response).map(row => ({ ...row, cantidad_antecedentes: Array.isArray(row.antecedentes) ? row.antecedentes.length : 0 }))
+}

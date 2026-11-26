@@ -74,3 +74,17 @@ export interface CreatedPatient extends PatientDetail {
 
 export type ContactChange = ContactInput | ({ id_contacto: string } & Partial<ContactInput>)
 export type PatientPatch = Partial<Omit<Patient, 'id_paciente'>> & { contactos?: ContactChange[] }
+
+export interface PatientHistory {
+  id_historia: string
+  id_paciente: string
+  paciente: string
+  fecha_apertura: string
+  observaciones_generales: string | null
+  cuestionario_complementario: Record<string, unknown>
+  antecedentes: Antecedent[]
+}
+
+export interface RegisteredAntecedent extends Antecedent {
+  id_historia: string
+}

@@ -1,7 +1,7 @@
 import type { Pool } from 'pg'
 import { contactNotFound } from '../../../../domain/pacientes/errors.js'
 import type { PatientRepository } from '../../../../application/ports/pacientes.repository.js'
-import type { Patient, PatientDetail, PatientScope, Contact, Antecedent } from '../../../../domain/pacientes/entities.js'
+import type { Patient, PatientDetail, PatientScope, Contact, Antecedent, PatientHistory, RegisteredAntecedent } from '../../../../domain/pacientes/entities.js'
 import { pool } from '../connection.js'
 import { withTransaction } from '../transaction.js'
 
@@ -36,6 +36,29 @@ async function readPatient(source: Pick<Pool, 'query'>, id: string, scope: Patie
 
 export function postgresPatientRepository(source: Pick<Pool, 'query' | 'connect'> = pool): PatientRepository {
   return {
+    async findHistory(id, scope) {
+      const { rows } = await source.query<PatientHistory>(`
+        SELECT h.id_historia::text, h.id_paciente::text, concat_ws(' ', p.nombres, p.apellidos) AS paciente,
+          h.fecha_apertura::text, h.observaciones_generales, h.cuestionario_complementario,
+          COALESCE((SELECT jsonb_agg(jsonb_build_object('id_antecedente', a.id_antecedente::text,
+            'tipo', a.tipo, 'descripcion', a.descripcion, 'fecha_registro', a.fecha_registro::text)
+            ORDER BY a.fecha_registro DESC, a.id_antecedente DESC)
+            FROM sis_god."ANTECEDENTE" a WHERE a.id_historia=h.id_historia), '[]'::jsonb) AS antecedentes
+        FROM sis_god."PACIENTE" p JOIN sis_god."HISTORIA_CLINICA" h USING (id_paciente)
+        WHERE ${authorized} AND p.id_paciente=$4::bigint`, [...scopeValues(scope), id])
+      return rows[0] ?? null
+    },
+    async createAntecedent(id, input, scope) {
+      // La historia se obtiene del paciente autorizado; la solicitud no elige una historia distinta.
+      const { rows } = await source.query<RegisteredAntecedent>(`
+        INSERT INTO sis_god."ANTECEDENTE" (tipo, descripcion, fecha_registro, id_historia)
+        SELECT $5::text, $6::text, COALESCE($7::date,CURRENT_DATE), h.id_historia
+        FROM sis_god."PACIENTE" p JOIN sis_god."HISTORIA_CLINICA" h USING (id_paciente)
+        WHERE ${authorized} AND p.id_paciente=$4::bigint
+        RETURNING id_antecedente::text, id_historia::text, tipo, descripcion, fecha_registro::text`,
+      [...scopeValues(scope), id, input.tipo, input.descripcion, input.fecha_registro])
+      return rows[0] ?? null
+    },
     updatePatient: (id, input, scope) => withTransaction(async client => {
       // Bloquear primero al paciente mantiene un orden común para sus modificaciones y bajas de contactos.
       const patient = await client.query(`SELECT p.id_paciente FROM sis_god."PACIENTE" p

@@ -440,10 +440,10 @@
         "tags": [
           "pacientes"
         ],
-        "summary": "GET /pacientes/:id/historia",
-        "description": "Responsable: Erick. Implementación pendiente. Exportar getHistory desde pacientes.controller.ts.",
+        "summary": "Consultar historia clínica y antecedentes",
+        "description": "Requiere historias/leer y aplica el alcance global, propio o asignado. Incluye observaciones, cuestionario complementario y antecedentes ordenados por fecha e identificador descendentes. Una historia sin antecedentes devuelve []. Recepción no accede con sus permisos iniciales; sus consultas administrativas se mantienen en GET /pacientes/{id}.",
         "x-owner": "Erick",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -455,16 +455,73 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$",
+              "description": "Identificador bigint representado como texto para conservar su precisión."
+            },
+            "description": "Identificador del paciente, no de la historia clínica."
           }
         ],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "200": {
+            "description": "Historia clínica y antecedentes del paciente autorizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesHistoria"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "400": {
+            "description": "Identificador o datos inválidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sesión ausente o inválida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso clínico, titularidad o asignación para el paciente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Historia clínica inexistente o no disponible dentro del alcance autorizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "No fue posible completar la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
           }
         }
       }
@@ -475,10 +532,10 @@
         "tags": [
           "pacientes"
         ],
-        "summary": "POST /pacientes/:id/antecedentes",
-        "description": "Responsable: Erick. Implementación pendiente. Exportar createAntecedent desde pacientes.controller.ts.",
+        "summary": "Registrar un antecedente en la historia del paciente",
+        "description": "Requiere antecedentes/crear y aplica el alcance autorizado. La historia se obtiene del paciente de la ruta; no se aceptan id_historia, id_paciente ni identificadores de antecedente en el cuerpo. Si fecha_registro se omite o es nula/vacía se usa CURRENT_DATE. La inserción es una única sentencia SQL atómica y no modifica la historia ni crea pacientes.",
         "x-owner": "Erick",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -490,25 +547,86 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$",
+              "description": "Identificador bigint representado como texto para conservar su precisión."
+            },
+            "description": "Identificador del paciente, no de la historia clínica."
           }
         ],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "201": {
+            "description": "Antecedente registrado con el identificador de su historia.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesAntecedenteRegistrado"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "400": {
+            "description": "Identificador o datos inválidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sesión ausente o inválida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso clínico, titularidad o asignación para el paciente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Historia clínica inexistente o no disponible dentro del alcance autorizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "No fue posible completar la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
           }
         },
         "requestBody": {
           "required": true,
-          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/pacientesAntecedenteInput"
+              },
+              "example": {
+                "tipo": "Alergia",
+                "descripcion": "Antecedente ficticio de prueba",
+                "fecha_registro": "2026-01-15"
               }
             }
           }
@@ -1242,6 +1360,87 @@
               "$ref": "#/components/schemas/pacientesContactoCambio"
             },
             "description": "Con id_contacto modifica campos del contacto propio; sin id agrega uno nuevo. Los omitidos se conservan y [] no elimina contactos."
+          }
+        }
+      },
+      "pacientesHistoria": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id_historia",
+          "id_paciente",
+          "paciente",
+          "fecha_apertura",
+          "observaciones_generales",
+          "cuestionario_complementario",
+          "antecedentes"
+        ],
+        "properties": {
+          "id_historia": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "description": "Identificador bigint representado como texto para conservar su precisión."
+          },
+          "id_paciente": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "description": "Identificador bigint representado como texto para conservar su precisión."
+          },
+          "paciente": {
+            "type": "string"
+          },
+          "fecha_apertura": {
+            "type": "string",
+            "format": "date"
+          },
+          "observaciones_generales": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cuestionario_complementario": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "antecedentes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/pacientesAntecedente"
+            }
+          }
+        }
+      },
+      "pacientesAntecedenteRegistrado": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id_antecedente",
+          "tipo",
+          "descripcion",
+          "fecha_registro",
+          "id_historia"
+        ],
+        "properties": {
+          "id_antecedente": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "description": "Identificador bigint representado como texto para conservar su precisión."
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "fecha_registro": {
+            "type": "string",
+            "format": "date"
+          },
+          "id_historia": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "description": "Identificador bigint representado como texto para conservar su precisión."
           }
         }
       }

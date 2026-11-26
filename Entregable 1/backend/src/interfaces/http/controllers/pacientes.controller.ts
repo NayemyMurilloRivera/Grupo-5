@@ -1,5 +1,7 @@
 import type { Request, RequestHandler, Response } from 'express'
 import type { PatientRepository } from '../../../application/ports/pacientes.repository.js'
+import { getHistory as history } from '../../../application/use-cases/pacientes/getHistory.js'
+import { createAntecedent as registerAntecedent } from '../../../application/use-cases/pacientes/createAntecedent.js'
 import { updatePatient as update } from '../../../application/use-cases/pacientes/updatePatient.js'
 import { deleteContact as removeContact } from '../../../application/use-cases/pacientes/deleteContact.js'
 import { listPatients as list } from '../../../application/use-cases/pacientes/listPatients.js'
@@ -8,7 +10,7 @@ import { knownPatientError } from '../../../domain/pacientes/errors.js'
 import { createPatient as create } from '../../../application/use-cases/pacientes/createPatient.js'
 import type { AuthContext } from '../../../domain/seguridad/entities.js'
 import { patientRepository } from '../../../infrastructure/database/sql/repositories/pacientes.repository.js'
-import { createPatientInput, updatePatientInput, listPatientsInput, patientId, patientScope } from '../validators/pacientes.validator.js'
+import { createPatientInput, createAntecedentInput, updatePatientInput, listPatientsInput, patientId, patientScope } from '../validators/pacientes.validator.js'
 
 function handle(work: (req: Request, res: Response) => Promise<unknown>, status = 200): RequestHandler {
   return async (req, res, next) => {
@@ -28,6 +30,9 @@ function handle(work: (req: Request, res: Response) => Promise<unknown>, status 
 
 export function pacientesController(repo: PatientRepository) {
   return {
+    getHistory: handle((req, res) => history(repo, patientId(req.params.id), patientScope(res.locals.authorization))),
+    createAntecedent: handle((req, res) => registerAntecedent(repo, patientId(req.params.id),
+      createAntecedentInput(req.body), patientScope(res.locals.authorization)), 201),
     updatePatient: handle((req, res) => update(repo, patientId(req.params.id), updatePatientInput(req.body), patientScope(res.locals.authorization))),
     deleteContact: handle((req, res) => removeContact(repo, patientId(req.params.id), patientId(req.params.contactoId, 'contactoId'),
       patientScope(res.locals.authorization)), 204),
@@ -42,4 +47,4 @@ export function pacientesController(repo: PatientRepository) {
   }
 }
 
-export const { createPatient, listPatients, getPatient, updatePatient, deleteContact } = pacientesController(patientRepository)
+export const { createPatient, listPatients, getPatient, updatePatient, deleteContact, getHistory, createAntecedent } = pacientesController(patientRepository)

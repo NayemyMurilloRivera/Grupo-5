@@ -1,4 +1,4 @@
-import type { PatientFilters, PatientScope, PatientInput, PatientPatch, ContactChange, ContactInput } from '../../../domain/pacientes/entities.js'
+import type { PatientFilters, PatientScope, PatientInput, AntecedentInput, PatientPatch, ContactChange, ContactInput } from '../../../domain/pacientes/entities.js'
 import { invalidPatientInput, patientAccessDenied } from '../../../domain/pacientes/errors.js'
 
 export function patientId(value: unknown, name = 'id'): string {
@@ -108,12 +108,7 @@ export function createPatientInput(value: unknown): PatientInput {
         parentesco: requiredText(contact.parentesco, 'contactos.parentesco', 50),
         telefono: requiredText(contact.telefono, 'contactos.telefono', 25) }
     }),
-    antecedentes: childRecords(data.antecedentes, 'antecedentes', 100).map(value => {
-      const record = objectFields(value, ['tipo', 'descripcion', 'fecha_registro'])
-      return { tipo: requiredText(record.tipo, 'antecedentes.tipo', 60),
-        descripcion: requiredText(record.descripcion, 'antecedentes.descripcion', 10000),
-        fecha_registro: calendarDate(record.fecha_registro, 'antecedentes.fecha_registro') }
-    }),
+    antecedentes: childRecords(data.antecedentes, 'antecedentes', 100).map(createAntecedentInput),
   }
 }
 
@@ -157,4 +152,13 @@ export function updatePatientInput(value: unknown): PatientPatch {
     if (new Set(ids).size !== ids.length) throw invalidPatientInput('Un contacto no puede aparecer dos veces en la misma modificación.')
   }
   return result
+}
+
+export function createAntecedentInput(value: unknown): AntecedentInput {
+  const data = objectFields(value, ['tipo', 'descripcion', 'fecha_registro'])
+  return {
+    tipo: requiredText(data.tipo, 'tipo', 60),
+    descripcion: requiredText(data.descripcion, 'descripcion', 10000),
+    fecha_registro: calendarDate(data.fecha_registro, 'fecha_registro'),
+  }
 }
