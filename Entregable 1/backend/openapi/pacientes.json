@@ -1,0 +1,317 @@
+{
+  "paths": {
+    "/pacientes": {
+      "post": {
+        "operationId": "createPatient",
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "POST /pacientes",
+        "description": "Responsable: Erick. Implementación pendiente. Exportar createPatient desde pacientes.controller.ts.",
+        "x-owner": "Erick",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listPatients",
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "GET /pacientes",
+        "description": "Responsable: Erick. Implementación pendiente. Exportar listPatients desde pacientes.controller.ts.",
+        "x-owner": "Erick",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/pacientes/{id}": {
+      "get": {
+        "operationId": "getPatient",
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "GET /pacientes/:id",
+        "description": "Responsable: Erick. Implementación pendiente. Exportar getPatient desde pacientes.controller.ts.",
+        "x-owner": "Erick",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePatient",
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "PATCH /pacientes/:id",
+        "description": "Responsable: Erick. Implementación pendiente. Exportar updatePatient desde pacientes.controller.ts.",
+        "x-owner": "Erick",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pacientes/{id}/historia": {
+      "get": {
+        "operationId": "getHistory",
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "GET /pacientes/:id/historia",
+        "description": "Responsable: Erick. Implementación pendiente. Exportar getHistory desde pacientes.controller.ts.",
+        "x-owner": "Erick",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/pacientes/{id}/antecedentes": {
+      "post": {
+        "operationId": "createAntecedent",
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "POST /pacientes/:id/antecedentes",
+        "description": "Responsable: Erick. Implementación pendiente. Exportar createAntecedent desde pacientes.controller.ts.",
+        "x-owner": "Erick",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/historias/{id}/cuestionario": {
+      "patch": {
+        "operationId": "updateQuestionnaire",
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "PATCH /historias/:id/cuestionario",
+        "description": "Responsable: Erick. Implementación pendiente. Exportar updateQuestionnaire desde pacientes.controller.ts.",
+        "x-owner": "Erick",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pacientes/{id}/contactos/{contactoId}": {
+      "delete": {
+        "operationId": "deleteContact",
+        "tags": [
+          "pacientes"
+        ],
+        "summary": "DELETE /pacientes/:id/contactos/:contactoId",
+        "description": "Responsable: Erick. Implementación pendiente. Exportar deleteContact desde pacientes.controller.ts.",
+        "x-owner": "Erick",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contactoId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}

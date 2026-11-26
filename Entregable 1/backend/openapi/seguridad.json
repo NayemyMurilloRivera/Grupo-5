@@ -1,0 +1,271 @@
+{
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "tags": [
+          "seguridad"
+        ],
+        "summary": "POST /auth/login",
+        "description": "Responsable: Nayemy. Implementación pendiente. Exportar login desde seguridad.controller.ts.",
+        "x-owner": "Nayemy",
+        "x-status": "pending",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "getMe",
+        "tags": [
+          "seguridad"
+        ],
+        "summary": "GET /auth/me",
+        "description": "Responsable: Nayemy. Implementación pendiente. Exportar getMe desde seguridad.controller.ts.",
+        "x-owner": "Nayemy",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/roles": {
+      "get": {
+        "operationId": "listRoles",
+        "tags": [
+          "seguridad"
+        ],
+        "summary": "GET /roles",
+        "description": "Responsable: Nayemy. Implementación pendiente. Exportar listRoles desde seguridad.controller.ts.",
+        "x-owner": "Nayemy",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/permisos": {
+      "get": {
+        "operationId": "listPermissions",
+        "tags": [
+          "seguridad"
+        ],
+        "summary": "GET /permisos",
+        "description": "Responsable: Nayemy. Implementación pendiente. Exportar listPermissions desde seguridad.controller.ts.",
+        "x-owner": "Nayemy",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/usuarios": {
+      "post": {
+        "operationId": "createUser",
+        "tags": [
+          "seguridad"
+        ],
+        "summary": "POST /usuarios",
+        "description": "Responsable: Nayemy. Implementación pendiente. Exportar createUser desde seguridad.controller.ts.",
+        "x-owner": "Nayemy",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listUsers",
+        "tags": [
+          "seguridad"
+        ],
+        "summary": "GET /usuarios",
+        "description": "Responsable: Nayemy. Implementación pendiente. Exportar listUsers desde seguridad.controller.ts.",
+        "x-owner": "Nayemy",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/usuarios/{id}": {
+      "patch": {
+        "operationId": "updateUser",
+        "tags": [
+          "seguridad"
+        ],
+        "summary": "PATCH /usuarios/:id",
+        "description": "Responsable: Nayemy. Implementación pendiente. Exportar updateUser desde seguridad.controller.ts.",
+        "x-owner": "Nayemy",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles/{id}/permisos": {
+      "put": {
+        "operationId": "replaceRolePermissions",
+        "tags": [
+          "seguridad"
+        ],
+        "summary": "PUT /roles/:id/permisos",
+        "description": "Responsable: Nayemy. Implementación pendiente. Exportar replaceRolePermissions desde seguridad.controller.ts.",
+        "x-owner": "Nayemy",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}

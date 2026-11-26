@@ -1,0 +1,320 @@
+{
+  "paths": {
+    "/planes-tratamiento": {
+      "post": {
+        "operationId": "createPlan",
+        "tags": [
+          "planes"
+        ],
+        "summary": "POST /planes-tratamiento",
+        "description": "Responsable: Esaul. Implementación pendiente. Exportar createPlan desde planes.controller.ts.",
+        "x-owner": "Esaul",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listPlans",
+        "tags": [
+          "planes"
+        ],
+        "summary": "GET /planes-tratamiento",
+        "description": "Responsable: Esaul. Implementación pendiente. Exportar listPlans desde planes.controller.ts.",
+        "x-owner": "Esaul",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/planes-tratamiento/{id}": {
+      "get": {
+        "operationId": "getPlan",
+        "tags": [
+          "planes"
+        ],
+        "summary": "GET /planes-tratamiento/:id",
+        "description": "Responsable: Esaul. Implementación pendiente. Exportar getPlan desde planes.controller.ts.",
+        "x-owner": "Esaul",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePlan",
+        "tags": [
+          "planes"
+        ],
+        "summary": "PATCH /planes-tratamiento/:id",
+        "description": "Responsable: Esaul. Implementación pendiente. Exportar updatePlan desde planes.controller.ts.",
+        "x-owner": "Esaul",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/planes-tratamiento/{id}/presupuestos": {
+      "post": {
+        "operationId": "createBudget",
+        "tags": [
+          "planes"
+        ],
+        "summary": "POST /planes-tratamiento/:id/presupuestos",
+        "description": "Responsable: Esaul. Implementación pendiente. Exportar createBudget desde planes.controller.ts.",
+        "x-owner": "Esaul",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/presupuestos/{id}/aceptacion": {
+      "post": {
+        "operationId": "acceptBudget",
+        "tags": [
+          "planes"
+        ],
+        "summary": "POST /presupuestos/:id/aceptacion",
+        "description": "Responsable: Esaul. Implementación pendiente. Exportar acceptBudget desde planes.controller.ts.",
+        "x-owner": "Esaul",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/obligaciones/{id}": {
+      "get": {
+        "operationId": "getObligation",
+        "tags": [
+          "planes"
+        ],
+        "summary": "GET /obligaciones/:id",
+        "description": "Responsable: Esaul. Implementación pendiente. Exportar getObligation desde planes.controller.ts.",
+        "x-owner": "Esaul",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/presupuestos/{id}/revisor": {
+      "patch": {
+        "operationId": "updateReviewer",
+        "tags": [
+          "planes"
+        ],
+        "summary": "PATCH /presupuestos/:id/revisor",
+        "description": "Responsable: Esaul. Implementación pendiente. Exportar updateReviewer desde planes.controller.ts.",
+        "x-owner": "Esaul",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}

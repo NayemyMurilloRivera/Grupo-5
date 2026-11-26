@@ -1,0 +1,22 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SIS-GOD Entregable 1 · Contrato de rutas",
+    "version": "0.1.0",
+    "description": "Infraestructura lista; 40 operaciones de negocio pendientes de implementación. Este archivo no acredita funcionalidad completada."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000/api/v1"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "sis-god-entregable-1",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n API,WEB -c green,cyan \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run dev -w backend",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test:shared && npm run test:clients && npm run test:modules",
+    "test:ui": "node scripts/check-ui.mjs",
+    "check:scaffold": "node scripts/check-scaffold.mjs",
+    "db:install": "node --import tsx scripts/database.mjs install",
+    "db:seed": "node --import tsx scripts/database.mjs seed",
+    "test:database": "node --import tsx scripts/database.mjs test",
+    "test:shared": "npm run test -w backend",
+    "test:clients": "node --import tsx --test frontend/tests/api-clients.test.ts",
+    "test:modules": "node scripts/run-module-tests.mjs",
+    "docs:api": "node scripts/build-openapi.mjs",
+    "check:ownership": "node scripts/check-ownership.mjs",
+    "db:status": "node --import tsx scripts/database.mjs status",
+    "setup": "node scripts/prepare-dev.mjs --setup-only",
+    "predev": "node scripts/prepare-dev.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.5",
+    "playwright": "1.65.1"
+  }
+}

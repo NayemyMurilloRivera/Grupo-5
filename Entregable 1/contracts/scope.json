@@ -1,0 +1,61 @@
+{
+  "tables": {
+    "Nayemy": [
+      "ROL",
+      "PERMISO",
+      "ROL_PERMISO",
+      "USUARIO"
+    ],
+    "Erick": [
+      "PACIENTE",
+      "HISTORIA_CLINICA",
+      "CONTACTO",
+      "ANTECEDENTE"
+    ],
+    "Josenrique": [
+      "EMPLEADO",
+      "ODONTOLOGO",
+      "PERSONAL_APOYO",
+      "TRATAMIENTO"
+    ],
+    "Esaul": [
+      "PLAN_TRATAMIENTO",
+      "DETALLE_PLAN",
+      "PRESUPUESTO",
+      "OBLIGACION"
+    ],
+    "Rodrigo": [
+      "PAGO",
+      "METODO_PAGO",
+      "BOLETA",
+      "FACTURA"
+    ]
+  },
+  "deferred": [
+    "ATENCION",
+    "CATEGORIA",
+    "CITA",
+    "COMPRA",
+    "CONSULTORIO",
+    "DETALLE_COMPRA",
+    "DIAGNOSTICO",
+    "DIAGNOSTICO_ATENCION",
+    "EJECUCION_PROCEDIMIENTO",
+    "ESPECIALIDAD",
+    "ESTADO_PIEZA",
+    "HORARIO",
+    "MATERIAL_UTILIZADO",
+    "MOVIMIENTO_INVENTARIO",
+    "ODONTOGRAMA",
+    "ODONTOLOGO_ESPECIALIDAD",
+    "PIEZA_DENTAL",
+    "PROCEDIMIENTO",
+    "PRODUCTO",
+    "PROVEEDOR"
+  ],
+  "endpointCount": 40,
+  "sharedEndpoints": [
+    "GET /health",
+    "GET /api/v1/health/db"
+  ]
+}

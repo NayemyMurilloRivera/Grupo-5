@@ -1,0 +1,262 @@
+{
+  "paths": {
+    "/metodos-pago": {
+      "get": {
+        "operationId": "listPaymentMethods",
+        "tags": [
+          "pagos"
+        ],
+        "summary": "GET /metodos-pago",
+        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar listPaymentMethods desde pagos.controller.ts.",
+        "x-owner": "Rodrigo",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPaymentMethod",
+        "tags": [
+          "pagos"
+        ],
+        "summary": "POST /metodos-pago",
+        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar createPaymentMethod desde pagos.controller.ts.",
+        "x-owner": "Rodrigo",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pagos": {
+      "post": {
+        "operationId": "createPayment",
+        "tags": [
+          "pagos"
+        ],
+        "summary": "POST /pagos",
+        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar createPayment desde pagos.controller.ts.",
+        "x-owner": "Rodrigo",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pagos/{id}": {
+      "get": {
+        "operationId": "getPayment",
+        "tags": [
+          "pagos"
+        ],
+        "summary": "GET /pagos/:id",
+        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getPayment desde pagos.controller.ts.",
+        "x-owner": "Rodrigo",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/pacientes/{id}/estado-cuenta": {
+      "get": {
+        "operationId": "getAccount",
+        "tags": [
+          "pagos"
+        ],
+        "summary": "GET /pacientes/:id/estado-cuenta",
+        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getAccount desde pagos.controller.ts.",
+        "x-owner": "Rodrigo",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/pagos/{id}/comprobante": {
+      "get": {
+        "operationId": "getReceipt",
+        "tags": [
+          "pagos"
+        ],
+        "summary": "GET /pagos/:id/comprobante",
+        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getReceipt desde pagos.controller.ts.",
+        "x-owner": "Rodrigo",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/reportes/cuentas-por-cobrar": {
+      "get": {
+        "operationId": "getReceivablesReport",
+        "tags": [
+          "pagos"
+        ],
+        "summary": "GET /reportes/cuentas-por-cobrar",
+        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getReceivablesReport desde pagos.controller.ts.",
+        "x-owner": "Rodrigo",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/mi/estado-cuenta": {
+      "get": {
+        "operationId": "getMyAccount",
+        "tags": [
+          "pagos"
+        ],
+        "summary": "GET /mi/estado-cuenta",
+        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getMyAccount desde pagos.controller.ts.",
+        "x-owner": "Rodrigo",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}

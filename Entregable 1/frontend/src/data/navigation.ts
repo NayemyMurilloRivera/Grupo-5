@@ -1,0 +1,2 @@
+import type { Role } from '../types/session'
+export const navigation:Record<Role,string[]>={ADMINISTRADOR:["pacientes", "historias", "personal", "tratamientos", "planes", "presupuestos", "pagos", "cuentas", "reportes", "usuarios", "roles"],RECEPCIONISTA:['pacientes','planes','presupuestos','pagos','cuentas','reportes'],ODONTOLOGO:['pacientes','historias','tratamientos','planes','presupuestos'],ASISTENTE:['historias','planes'],PACIENTE:['planes','cuentas']}

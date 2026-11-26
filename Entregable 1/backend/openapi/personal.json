@@ -1,0 +1,280 @@
+{
+  "paths": {
+    "/empleados": {
+      "post": {
+        "operationId": "createEmployee",
+        "tags": [
+          "personal"
+        ],
+        "summary": "POST /empleados",
+        "description": "Responsable: Josenrique. Implementación pendiente. Exportar createEmployee desde personal.controller.ts.",
+        "x-owner": "Josenrique",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listEmployees",
+        "tags": [
+          "personal"
+        ],
+        "summary": "GET /empleados",
+        "description": "Responsable: Josenrique. Implementación pendiente. Exportar listEmployees desde personal.controller.ts.",
+        "x-owner": "Josenrique",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/empleados/{id}": {
+      "get": {
+        "operationId": "getEmployee",
+        "tags": [
+          "personal"
+        ],
+        "summary": "GET /empleados/:id",
+        "description": "Responsable: Josenrique. Implementación pendiente. Exportar getEmployee desde personal.controller.ts.",
+        "x-owner": "Josenrique",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateEmployee",
+        "tags": [
+          "personal"
+        ],
+        "summary": "PATCH /empleados/:id",
+        "description": "Responsable: Josenrique. Implementación pendiente. Exportar updateEmployee desde personal.controller.ts.",
+        "x-owner": "Josenrique",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/odontologos": {
+      "get": {
+        "operationId": "listDentists",
+        "tags": [
+          "personal"
+        ],
+        "summary": "GET /odontologos",
+        "description": "Responsable: Josenrique. Implementación pendiente. Exportar listDentists desde personal.controller.ts.",
+        "x-owner": "Josenrique",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      }
+    },
+    "/tratamientos": {
+      "get": {
+        "operationId": "listTreatments",
+        "tags": [
+          "personal"
+        ],
+        "summary": "GET /tratamientos",
+        "description": "Responsable: Josenrique. Implementación pendiente. Exportar listTreatments desde personal.controller.ts.",
+        "x-owner": "Josenrique",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createTreatment",
+        "tags": [
+          "personal"
+        ],
+        "summary": "POST /tratamientos",
+        "description": "Responsable: Josenrique. Implementación pendiente. Exportar createTreatment desde personal.controller.ts.",
+        "x-owner": "Josenrique",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tratamientos/{id}": {
+      "patch": {
+        "operationId": "updateTreatment",
+        "tags": [
+          "personal"
+        ],
+        "summary": "PATCH /tratamientos/:id",
+        "description": "Responsable: Josenrique. Implementación pendiente. Exportar updateTreatment desde personal.controller.ts.",
+        "x-owner": "Josenrique",
+        "x-status": "pending",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          },
+          "503": {
+            "description": "Seguridad o conexión no disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}
