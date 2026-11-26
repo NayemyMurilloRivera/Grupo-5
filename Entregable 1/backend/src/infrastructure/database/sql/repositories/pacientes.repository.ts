@@ -1,0 +1,57 @@
+import type { Pool } from 'pg'
+import type { PatientRepository } from '../../../../application/ports/pacientes.repository.js'
+import type { Patient, PatientDetail, PatientScope } from '../../../../domain/pacientes/entities.js'
+import { pool } from '../connection.js'
+
+const columns = `p.id_paciente::text AS id_paciente, p.tipo_documento, p.numero_documento,
+  p.nombres, p.apellidos, p.fecha_nacimiento::text AS fecha_nacimiento, p.telefono, p.correo, p.direccion`
+
+// El alcance también limita el conteo y la paginación; EXISTS evita duplicar pacientes con varios planes.
+const authorized = `($1::text = 'global'
+  OR ($1 = 'propio' AND p.id_paciente = $2::bigint)
+  OR ($1 = 'asignado' AND EXISTS (
+    SELECT 1 FROM sis_god."HISTORIA_CLINICA" h
+    JOIN sis_god."PLAN_TRATAMIENTO" plan USING (id_historia)
+    WHERE h.id_paciente = p.id_paciente AND plan.id_odontologo = $3::bigint
+  )))`
+
+function scopeValues(scope: PatientScope) {
+  return [scope.alcance, scope.alcance === 'propio' ? scope.idPaciente : null,
+    scope.alcance === 'asignado' ? scope.idEmpleado : null]
+}
+
+export function postgresPatientRepository(source: Pick<Pool, 'query'> = pool): PatientRepository {
+  return {
+    async listPatients(filters, scope) {
+      const { rows: [page] } = await source.query<{ items: Patient[]; total: number }>(`
+        WITH filtered AS (
+          SELECT ${columns} FROM sis_god."PACIENTE" p WHERE ${authorized}
+            AND ($4::text IS NULL OR strpos(lower(concat_ws(' ', p.nombres, p.apellidos)), lower($4)) > 0
+              OR strpos(lower(p.numero_documento), lower($4)) > 0)
+            AND ($5::text IS NULL OR p.tipo_documento = $5)
+            AND ($6::text IS NULL OR p.numero_documento = $6)
+        ), paged AS (
+          SELECT * FROM filtered ORDER BY id_paciente::bigint LIMIT $7 OFFSET $8
+        )
+        SELECT COALESCE((SELECT jsonb_agg(to_jsonb(paged) ORDER BY id_paciente::bigint) FROM paged), '[]'::jsonb) AS items,
+          (SELECT count(*)::integer FROM filtered) AS total`,
+      [...scopeValues(scope), filters.q ?? null, filters.tipo_documento ?? null, filters.numero_documento ?? null,
+        filters.limite, (filters.pagina - 1) * filters.limite])
+      return { ...page, pagina: filters.pagina, limite: filters.limite,
+        total_paginas: Math.ceil(page.total / filters.limite) }
+    },
+    async findPatient(id, scope) {
+      const { rows } = await source.query<PatientDetail>(`
+        SELECT ${columns}, COALESCE((
+          SELECT jsonb_agg(jsonb_build_object('id_contacto', c.id_contacto::text,
+            'nombre', c.nombre, 'parentesco', c.parentesco, 'telefono', c.telefono) ORDER BY c.id_contacto)
+          FROM sis_god."CONTACTO" c WHERE c.id_paciente = p.id_paciente
+        ), '[]'::jsonb) AS contactos
+        FROM sis_god."PACIENTE" p WHERE ${authorized} AND p.id_paciente = $4::bigint`,
+      [...scopeValues(scope), id])
+      return rows[0] ?? null
+    },
+  }
+}
+
+export const patientRepository = postgresPatientRepository()
