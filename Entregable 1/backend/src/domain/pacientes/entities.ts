@@ -41,3 +41,33 @@ export interface PatientPage {
   total: number
   total_paginas: number
 }
+
+export interface ContactInput {
+  nombre: string
+  parentesco: string
+  telefono: string
+}
+
+export interface AntecedentInput {
+  tipo: string
+  descripcion: string
+  fecha_registro: string | null
+}
+
+export interface Antecedent extends Omit<AntecedentInput, 'fecha_registro'> {
+  id_antecedente: string
+  fecha_registro: string
+}
+
+export interface PatientInput extends Omit<Patient, 'id_paciente'> {
+  contactos: ContactInput[]
+  antecedentes: AntecedentInput[]
+}
+
+export interface CreatedPatient extends PatientDetail {
+  historia: {
+    id_historia: string
+    fecha_apertura: string
+    antecedentes: Antecedent[]
+  }
+}

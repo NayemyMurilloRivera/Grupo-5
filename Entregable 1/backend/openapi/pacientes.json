@@ -6,10 +6,10 @@
         "tags": [
           "pacientes"
         ],
-        "summary": "POST /pacientes",
-        "description": "Responsable: Erick. Implementación pendiente. Exportar createPatient desde pacientes.controller.ts.",
+        "summary": "Registrar paciente, historia y datos dependientes",
+        "description": "Crea paciente e historia única; opcionalmente incorpora contactos y antecedentes en una sola transacción. La historia se abre con CURRENT_DATE. Se requiere pacientes/crear con alcance global; los antecedentes requieren además antecedentes/crear global. Recepción puede registrar datos administrativos y contactos. No se aceptan identificadores ni se crea una cuenta de usuario. Una falla en cualquier inserción o en COMMIT revierte toda la operación.",
         "x-owner": "Erick",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -17,20 +17,87 @@
         ],
         "parameters": [],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "201": {
+            "description": "Paciente e historia confirmados con los registros dependientes enviados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesAlta"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "400": {
+            "description": "Datos personales, fechas o registros dependientes inválidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sesión ausente o inválida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso para el alta o para los antecedentes enviados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya existe un paciente con el mismo tipo y número de documento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Fallo al registrar o confirmar; la operación completa se revierte.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
           }
         },
         "requestBody": {
           "required": true,
-          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/pacientesAltaInput"
+              },
+              "example": {
+                "tipo_documento": "DNI",
+                "numero_documento": "99120001",
+                "nombres": "Paciente",
+                "apellidos": "De prueba",
+                "telefono": "900120001",
+                "contactos": [
+                  {
+                    "nombre": "Familiar de prueba",
+                    "parentesco": "Hermana",
+                    "telefono": "900120002"
+                  }
+                ]
               }
             }
           }
@@ -665,6 +732,274 @@
               "detalles": {
                 "type": "array",
                 "items": {}
+              }
+            }
+          }
+        }
+      },
+      "pacientesContactoInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nombre",
+          "parentesco",
+          "telefono"
+        ],
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "parentesco": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "telefono": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 25
+          }
+        }
+      },
+      "pacientesAntecedenteInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tipo",
+          "descripcion"
+        ],
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "descripcion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "fecha_registro": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  ""
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Si se omite o es nula/vacía se utiliza CURRENT_DATE de PostgreSQL."
+          }
+        }
+      },
+      "pacientesAltaInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tipo_documento",
+          "numero_documento",
+          "nombres",
+          "apellidos",
+          "telefono"
+        ],
+        "properties": {
+          "tipo_documento": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "numero_documento": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "nombres": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "apellidos": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "telefono": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 25
+          },
+          "fecha_nacimiento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  ""
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fecha de nacimiento válida, sin fechas futuras."
+          },
+          "correo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 254,
+            "description": "Correo válido; se guarda en minúsculas. Vacío o ausente se guarda como null."
+          },
+          "direccion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 250
+          },
+          "contactos": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/pacientesContactoInput"
+            },
+            "default": []
+          },
+          "antecedentes": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/pacientesAntecedenteInput"
+            },
+            "default": []
+          }
+        }
+      },
+      "pacientesAntecedente": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id_antecedente",
+          "tipo",
+          "descripcion",
+          "fecha_registro"
+        ],
+        "properties": {
+          "id_antecedente": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "description": "Identificador bigint representado como texto para conservar su precisión."
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "fecha_registro": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "pacientesAlta": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id_paciente",
+          "tipo_documento",
+          "numero_documento",
+          "nombres",
+          "apellidos",
+          "fecha_nacimiento",
+          "telefono",
+          "correo",
+          "direccion",
+          "contactos",
+          "historia"
+        ],
+        "properties": {
+          "id_paciente": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$",
+            "description": "Identificador bigint representado como texto para conservar su precisión."
+          },
+          "tipo_documento": {
+            "type": "string"
+          },
+          "numero_documento": {
+            "type": "string"
+          },
+          "nombres": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": "string"
+          },
+          "fecha_nacimiento": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "correo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "direccion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contactos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/pacientesContacto"
+            }
+          },
+          "historia": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id_historia",
+              "fecha_apertura",
+              "antecedentes"
+            ],
+            "properties": {
+              "id_historia": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,18}$",
+                "description": "Identificador bigint representado como texto para conservar su precisión."
+              },
+              "fecha_apertura": {
+                "type": "string",
+                "format": "date"
+              },
+              "antecedentes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/pacientesAntecedente"
+                }
               }
             }
           }

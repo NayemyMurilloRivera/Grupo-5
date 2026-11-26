@@ -2,8 +2,9 @@ import assert from 'node:assert/strict'
 import { randomBytes } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
+import { createPatient } from '../../../src/application/use-cases/pacientes/createPatient.js'
 import { getPatient } from '../../../src/application/use-cases/pacientes/getPatient.js'
-import { listPatientsInput, patientId, patientScope } from '../../../src/interfaces/http/validators/pacientes.validator.js'
+import { createPatientInput, listPatientsInput, patientId, patientScope } from '../../../src/interfaces/http/validators/pacientes.validator.js'
 
 const isError = (status: number) => (error: unknown) =>
   error instanceof Error && 'status' in error && error.status === status
@@ -34,13 +35,44 @@ test('los identificadores conservan precisión y el alcance se obtiene del middl
 })
 
 test('la consulta de detalle informa que un paciente no está disponible', async () => {
-  await assert.rejects(getPatient({ findPatient: async () => null, listPatients: async () => { throw new Error('No corresponde') } },
+  await assert.rejects(getPatient({ findPatient: async () => null },
     '1', { alcance: 'global' }), isError(404))
+})
+
+const basePatient = { tipo_documento: 'DNI', numero_documento: '99110001',
+  nombres: 'Paciente', apellidos: 'De prueba', telefono: '900110001' }
+
+test('el alta valida datos personales, fechas y los registros dependientes', () => {
+  const result = createPatientInput({ ...basePatient, nombres: ' Paciente ', correo: 'PRUEBA@example.invalid',
+    fecha_nacimiento: '2000-02-29', contactos: [{ nombre: 'Familiar', parentesco: 'Hermano', telefono: '900110002' }] })
+  assert.equal(result.nombres, 'Paciente'); assert.equal(result.correo, 'prueba@example.invalid')
+  assert.equal(result.contactos.length, 1); assert.deepEqual(result.antecedentes, [])
+  assert.equal(createPatientInput({ ...basePatient, correo: '', fecha_nacimiento: '', direccion: ' ' }).correo, null)
+  for (const changes of [
+    { nombres: '' }, { nombres: 'x'.repeat(101) }, { telefono: null }, { numero_documento: 'x'.repeat(31) },
+    { fecha_nacimiento: '2025-02-29' }, { fecha_nacimiento: '2999-01-01' }, { fecha_nacimiento: '0000-01-01' },
+    { fecha_nacimiento: '2026-04-31' }, { fecha_nacimiento: '2020-01-01T00:00:00Z' }, { correo: 'sin-arroba' },
+    { id_paciente: '2' }, { historia: { id_historia: '3' } }, { contactos: null }, { contactos: {} },
+    { contactos: Array(21).fill({}) }, { contactos: [{ nombre: 'Familiar', parentesco: 'Otro' }] },
+    { contactos: [{ nombre: 'Familiar', parentesco: 'Otro', telefono: '900110002', id_paciente: '2' }] },
+    { antecedentes: [{ tipo: 'Alergia' }] }, { antecedentes: Array(101).fill({}) },
+    { antecedentes: [{ tipo: 'Alergia', descripcion: 'Dato', fecha_registro: '2026-02-30' }] },
+    { antecedentes: [{ tipo: 'Alergia', descripcion: 'Dato', id_historia: '1' }] },
+  ]) assert.throws(() => createPatientInput({ ...basePatient, ...changes }), isError(400))
+})
+
+test('el caso de uso no registra pacientes sin alcance global ni antecedentes sin permiso', () => {
+  const repo = { createPatient: async () => { throw new Error('No debe consultar el repositorio') } }
+  const input = createPatientInput(basePatient)
+  assert.throws(() => createPatient(repo, input, { alcance: 'propio', idPaciente: '1' }), isError(403))
+  assert.throws(() => createPatient(repo, input, { alcance: 'asignado', idEmpleado: '1' }), isError(403))
+  assert.throws(() => createPatient(repo, createPatientInput({ ...basePatient,
+    antecedentes: [{ tipo: 'Alergia', descripcion: 'Dato de prueba' }] }), { alcance: 'global' }), isError(403))
 })
 
 const databaseUrl = process.env.PATIENTS_TEST_DATABASE_URL
 
-test('consultas de pacientes con PostgreSQL y autorización reales', { skip: !databaseUrl }, async t => {
+test('consultas y altas de pacientes con PostgreSQL y autorización reales', { skip: !databaseUrl }, async t => {
   const url = new URL(databaseUrl!)
   assert.equal(url.protocol, 'postgresql:')
   assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) && url.pathname.includes('prueba'),
@@ -190,5 +222,144 @@ test('consultas de pacientes con PostgreSQL y autorización reales', { skip: !da
     const { patientRepository } = await import('../../../src/infrastructure/database/sql/repositories/pacientes.repository.js')
     assert.equal(await patientRepository.findPatient(other, { alcance: 'propio', idPaciente: owner }), null)
     assert.equal(await patientRepository.findPatient(other, { alcance: 'asignado', idEmpleado: dentist }), null)
+  })
+
+  async function postPatient(body: unknown, status: number, token: string | undefined = tokens.admin) {
+    const response = await fetch(base + '/pacientes', { method: 'POST', headers: {
+      'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}),
+    }, body: JSON.stringify(body) })
+    const data = await response.json()
+    assert.equal(response.status, status, JSON.stringify(data))
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    return data
+  }
+  async function counts() {
+    const { rows: [row] } = await pool.query(`SELECT
+      (SELECT count(*)::int FROM sis_god."PACIENTE") AS pacientes,
+      (SELECT count(*)::int FROM sis_god."HISTORIA_CLINICA") AS historias,
+      (SELECT count(*)::int FROM sis_god."CONTACTO") AS contactos,
+      (SELECT count(*)::int FROM sis_god."ANTECEDENTE") AS antecedentes`)
+    return row
+  }
+
+  await t.test('el alta confirma paciente, historia única, contactos y antecedentes', async () => {
+    const before = await counts()
+    const body = { ...basePatient, fecha_nacimiento: '2000-02-29',
+      contactos: [{ nombre: 'Familiar uno', parentesco: 'Hermana', telefono: '900110002' },
+        { nombre: 'Familiar dos', parentesco: 'Padre', telefono: '900110003' }],
+      antecedentes: [{ tipo: 'Alergia', descripcion: 'Antecedente ficticio', fecha_registro: '2026-01-01' },
+        { tipo: 'Otro', descripcion: 'Segundo antecedente ficticio' }] }
+    const created = await postPatient(body, 201)
+    assert.equal(typeof created.id_paciente, 'string'); assert.equal(typeof created.historia.id_historia, 'string')
+    assert.equal(created.contactos.length, 2); assert.equal(created.historia.antecedentes.length, 2)
+    const today = (await pool.query('SELECT CURRENT_DATE::text AS fecha')).rows[0].fecha
+    assert.equal(created.historia.fecha_apertura, today)
+    assert.equal(created.historia.antecedentes[0].fecha_registro, '2026-01-01')
+    assert.equal(created.historia.antecedentes[1].fecha_registro, today)
+    assert.deepEqual(await counts(), { pacientes: before.pacientes + 1, historias: before.historias + 1,
+      contactos: before.contactos + 2, antecedentes: before.antecedentes + 2 })
+    const { rows: history } = await pool.query('SELECT id_historia FROM sis_god."HISTORIA_CLINICA" WHERE id_paciente=$1', [created.id_paciente])
+    assert.equal(history.length, 1); assert.equal(history[0].id_historia, created.historia.id_historia)
+    const { rows: owners } = await pool.query(`SELECT c.id_paciente, a.id_historia FROM sis_god."CONTACTO" c
+      JOIN sis_god."ANTECEDENTE" a ON a.id_historia=$2 WHERE c.id_paciente=$1`, [created.id_paciente, created.historia.id_historia])
+    assert.equal(owners.length, 4)
+    assert.equal((await request('/pacientes/' + created.id_paciente, 200, tokens.admin)).contactos.length, 2)
+  })
+
+  await t.test('recepción puede registrar un paciente sin datos opcionales ni crear cuentas', async () => {
+    const created = await postPatient({ ...basePatient, numero_documento: '99110002', correo: '', fecha_nacimiento: '' }, 201, tokens.recepcion)
+    assert.equal(created.correo, null); assert.equal(created.fecha_nacimiento, null)
+    assert.deepEqual(created.contactos, []); assert.deepEqual(created.historia.antecedentes, [])
+    assert.equal((await pool.query('SELECT 1 FROM sis_god."USUARIO" WHERE id_paciente=$1', [created.id_paciente])).rowCount, 0)
+  })
+
+  await t.test('el alta rechaza duplicados y datos inválidos sin guardar filas parciales', async () => {
+    const before = await counts()
+    assert.equal((await postPatient(basePatient, 409)).error.codigo, 'DOCUMENTO_DUPLICADO')
+    await postPatient({ ...basePatient, numero_documento: '99110003', fecha_nacimiento: '2999-01-01' }, 400)
+    await postPatient({ ...basePatient, numero_documento: '99110003', contactos: [{ nombre: 'Sin teléfono', parentesco: 'Otro' }] }, 400)
+    assert.deepEqual(await counts(), before)
+  })
+
+  await t.test('la autorización del alta distingue datos administrativos y clínicos', async () => {
+    const before = await counts()
+    for (const role of ['paciente', 'odontologo', 'asistente']) await postPatient({ ...basePatient, numero_documento: '99110004' }, 403, tokens[role])
+    const response = await fetch(base + '/pacientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(basePatient) })
+    assert.equal(response.status, 401)
+    await postPatient({ ...basePatient, numero_documento: '99110004',
+      antecedentes: [{ tipo: 'Alergia', descripcion: 'No autorizado' }] }, 403, tokens.recepcion)
+    const { rows: grants } = await pool.query(`DELETE FROM sis_god."ROL_PERMISO" rp USING sis_god."PERMISO" p
+      WHERE rp.id_rol=$1 AND rp.id_permiso=p.id_permiso AND p.recurso='antecedentes' AND p.accion='crear'
+      RETURNING rp.id_permiso`, [roleId('Administrador')])
+    try {
+      await postPatient({ ...basePatient, numero_documento: '99110004',
+        antecedentes: [{ tipo: 'Alergia', descripcion: 'Permiso retirado' }] }, 403)
+    } finally {
+      await pool.query(`INSERT INTO sis_god."ROL_PERMISO" (id_rol,id_permiso)
+        SELECT $1, unnest($2::bigint[])`, [roleId('Administrador'), grants.map(row => row.id_permiso)])
+    }
+    assert.deepEqual(await counts(), before)
+  })
+
+  await t.test('un error SQL en el segundo contacto revierte el paciente y su historia', async () => {
+    const before = await counts()
+    await pool.query(`CREATE FUNCTION sis_god.prueba_contacto() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Contacto rechazado en la prueba'; END $$;
+      CREATE TRIGGER prueba_contacto BEFORE INSERT ON sis_god."CONTACTO"
+      FOR EACH ROW WHEN (NEW.nombre = 'Contacto rechazado') EXECUTE FUNCTION sis_god.prueba_contacto()`)
+    try {
+      await postPatient({ ...basePatient, numero_documento: '99110005', contactos: [
+        { nombre: 'Contacto válido', parentesco: 'Otro', telefono: '900110002' },
+        { nombre: 'Contacto rechazado', parentesco: 'Otro', telefono: '900110003' }],
+        antecedentes: [{ tipo: 'Otro', descripcion: 'Dato ficticio' }] }, 500)
+      assert.deepEqual(await counts(), before)
+    } finally {
+      await pool.query('DROP TRIGGER prueba_contacto ON sis_god."CONTACTO"; DROP FUNCTION sis_god.prueba_contacto()')
+    }
+  })
+
+  await t.test('un error en un antecedente revierte también los contactos ya insertados', async () => {
+    const before = await counts()
+    await pool.query(`CREATE FUNCTION sis_god.prueba_antecedente() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Antecedente rechazado en la prueba'; END $$;
+      CREATE TRIGGER prueba_antecedente BEFORE INSERT ON sis_god."ANTECEDENTE"
+      FOR EACH ROW WHEN (NEW.tipo = 'Rechazado') EXECUTE FUNCTION sis_god.prueba_antecedente()`)
+    try {
+      await postPatient({ ...basePatient, numero_documento: '99110006', contactos: [
+        { nombre: 'Contacto válido', parentesco: 'Otro', telefono: '900110002' }],
+        antecedentes: [{ tipo: 'Válido', descripcion: 'Primer antecedente' },
+          { tipo: 'Rechazado', descripcion: 'Segundo antecedente' }] }, 500)
+      assert.deepEqual(await counts(), before)
+    } finally {
+      await pool.query('DROP TRIGGER prueba_antecedente ON sis_god."ANTECEDENTE"; DROP FUNCTION sis_god.prueba_antecedente()')
+    }
+  })
+
+  await t.test('un fallo diferido al confirmar tampoco deja registros parciales', async () => {
+    const before = await counts()
+    await pool.query(`CREATE FUNCTION sis_god.prueba_confirmacion() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Confirmación rechazada en la prueba'; END $$;
+      CREATE CONSTRAINT TRIGGER prueba_confirmacion AFTER INSERT ON sis_god."PACIENTE"
+      DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (NEW.numero_documento = '99110007')
+      EXECUTE FUNCTION sis_god.prueba_confirmacion()`)
+    try {
+      await postPatient({ ...basePatient, numero_documento: '99110007', contactos: [
+        { nombre: 'Contacto válido', parentesco: 'Otro', telefono: '900110002' }] }, 500)
+      assert.deepEqual(await counts(), before)
+    } finally {
+      await pool.query('DROP TRIGGER prueba_confirmacion ON sis_god."PACIENTE"; DROP FUNCTION sis_god.prueba_confirmacion()')
+    }
+  })
+
+  await t.test('dos altas simultáneas con el mismo documento crean un solo paciente', async () => {
+    const body = { ...basePatient, numero_documento: '99110008' }
+    const before = await counts()
+    const results = await Promise.all([1, 2].map(() => fetch(base + '/pacientes', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + tokens.admin, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })))
+    assert.deepEqual(results.map(result => result.status).sort(), [201, 409])
+    const after = await counts()
+    assert.equal(after.pacientes, before.pacientes + 1); assert.equal(after.historias, before.historias + 1)
+    assert.equal(after.contactos, before.contactos); assert.equal(after.antecedentes, before.antecedentes)
   })
 })

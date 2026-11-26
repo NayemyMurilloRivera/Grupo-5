@@ -7,3 +7,14 @@ export class PatientError extends Error {
 export const invalidPatientInput = (message: string) => new PatientError(400, 'ENTRADA_INVALIDA', message)
 export const patientNotFound = () => new PatientError(404, 'PACIENTE_NO_EXISTE', 'El paciente no existe o no está disponible para esta consulta.')
 export const patientAccessDenied = () => new PatientError(403, 'ACCESO_DENEGADO', 'No se ha autorizado la consulta de pacientes.')
+
+export function knownPatientError(error: unknown): PatientError | undefined {
+  if (error instanceof PatientError) return error
+  if (!error || typeof error !== 'object' || !('code' in error) || !('constraint' in error)) return
+  if (error.code === '23505' && error.constraint === 'uq_paciente_documento') {
+    return new PatientError(409, 'DOCUMENTO_DUPLICADO', 'Ya existe un paciente con ese tipo y número de documento.')
+  }
+  if (error.code === '23514' && error.constraint === 'ck_paciente_nacimiento') {
+    return invalidPatientInput('La fecha de nacimiento no puede ser futura.')
+  }
+}

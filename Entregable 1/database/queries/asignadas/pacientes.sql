@@ -34,3 +34,24 @@ SELECT p.id_paciente::text AS id_paciente, p.tipo_documento, p.numero_documento,
     JOIN sis_god."PLAN_TRATAMIENTO" plan USING (id_historia)
     WHERE h.id_paciente = p.id_paciente AND plan.id_odontologo = $3::bigint
   ))) AND p.id_paciente = $4::bigint;
+
+-- Alta: todas las consultas usan el mismo cliente; ante cualquier error se ejecuta ROLLBACK.
+BEGIN;
+-- Paciente: $1 tipo_documento, $2 numero_documento, $3 nombres, $4 apellidos,
+-- $5 fecha_nacimiento, $6 telefono, $7 correo, $8 direccion.
+INSERT INTO sis_god."PACIENTE" (tipo_documento, numero_documento, nombres, apellidos,
+          fecha_nacimiento, telefono, correo, direccion)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        RETURNING id_paciente::text, tipo_documento, numero_documento, nombres, apellidos,
+          fecha_nacimiento::text, telefono, correo, direccion;
+-- Historia: $1 id_paciente devuelto por la inserción anterior.
+INSERT INTO sis_god."HISTORIA_CLINICA" (fecha_apertura, id_paciente)
+        VALUES (CURRENT_DATE, $1) RETURNING id_historia::text, fecha_apertura::text;
+-- Repetir por contacto: $1 nombre, $2 parentesco, $3 telefono, $4 id_paciente.
+INSERT INTO sis_god."CONTACTO" (nombre, parentesco, telefono, id_paciente)
+          VALUES ($1,$2,$3,$4) RETURNING id_contacto::text, nombre, parentesco, telefono;
+-- Repetir por antecedente: $1 tipo, $2 descripcion, $3 fecha_registro, $4 id_historia.
+INSERT INTO sis_god."ANTECEDENTE" (tipo, descripcion, fecha_registro, id_historia)
+          VALUES ($1,$2,COALESCE($3::date,CURRENT_DATE),$4)
+          RETURNING id_antecedente::text, tipo, descripcion, fecha_registro::text;
+COMMIT;
