@@ -6,10 +6,10 @@
         "tags": [
           "pagos"
         ],
-        "summary": "GET /metodos-pago",
-        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar listPaymentMethods desde pagos.controller.ts.",
+        "summary": "Listar métodos de pago",
+        "description": "Listar métodos de pago. Responsable: Rodrigo.",
         "x-owner": "Rodrigo",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -17,11 +17,53 @@
         ],
         "parameters": [],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "200": {
+            "description": "Catálogo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/pagosMetodo"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
           }
         }
       },
@@ -30,10 +72,10 @@
         "tags": [
           "pagos"
         ],
-        "summary": "POST /metodos-pago",
-        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar createPaymentMethod desde pagos.controller.ts.",
+        "summary": "Crear método de pago (nombre único)",
+        "description": "Crear método de pago (nombre único). Responsable: Rodrigo.",
         "x-owner": "Rodrigo",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -41,20 +83,73 @@
         ],
         "parameters": [],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "201": {
+            "description": "Creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosMetodo"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "400": {
+            "description": "Entrada inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Nombre duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
           }
         },
         "requestBody": {
           "required": true,
-          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/pagosMetodoInput"
               }
             }
           }
@@ -67,10 +162,10 @@
         "tags": [
           "pagos"
         ],
-        "summary": "POST /pagos",
-        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar createPayment desde pagos.controller.ts.",
+        "summary": "Registrar abono con documento opcional (boleta o factura)",
+        "description": "Registrar abono con documento opcional (boleta o factura). Responsable: Rodrigo.",
         "x-owner": "Rodrigo",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -78,20 +173,83 @@
         ],
         "parameters": [],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "201": {
+            "description": "Pago registrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosPagoCreado"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "400": {
+            "description": "Entrada inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Obligación o método inexistente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SOBREPAGO o numeración duplicada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
           }
         },
         "requestBody": {
           "required": true,
-          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/pagosPagoInput"
               }
             }
           }
@@ -104,10 +262,10 @@
         "tags": [
           "pagos"
         ],
-        "summary": "GET /pagos/:id",
-        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getPayment desde pagos.controller.ts.",
+        "summary": "Consultar un pago",
+        "description": "Consultar un pago. Responsable: Rodrigo.",
         "x-owner": "Rodrigo",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -124,11 +282,55 @@
           }
         ],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "200": {
+            "description": "Pago",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosPago"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "404": {
+            "description": "No existe",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
           }
         }
       }
@@ -139,10 +341,10 @@
         "tags": [
           "pagos"
         ],
-        "summary": "GET /pacientes/:id/estado-cuenta",
-        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getAccount desde pagos.controller.ts.",
+        "summary": "Estado de cuenta de un paciente",
+        "description": "Estado de cuenta de un paciente. Responsable: Rodrigo.",
         "x-owner": "Rodrigo",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -159,11 +361,55 @@
           }
         ],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "200": {
+            "description": "Cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosEstadoCuenta"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "404": {
+            "description": "Paciente inexistente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
           }
         }
       }
@@ -174,10 +420,10 @@
         "tags": [
           "pagos"
         ],
-        "summary": "GET /pagos/:id/comprobante",
-        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getReceipt desde pagos.controller.ts.",
+        "summary": "Boleta o factura del pago",
+        "description": "Boleta o factura del pago. Responsable: Rodrigo.",
         "x-owner": "Rodrigo",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -194,11 +440,55 @@
           }
         ],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "200": {
+            "description": "Comprobante",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosComprobante"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "404": {
+            "description": "Pago inexistente o sin documento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
           }
         }
       }
@@ -209,22 +499,108 @@
         "tags": [
           "pagos"
         ],
-        "summary": "GET /reportes/cuentas-por-cobrar",
-        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getReceivablesReport desde pagos.controller.ts.",
+        "summary": "Reporte de cuentas por cobrar (GROUP BY/HAVING); formato=csv descarga archivo",
+        "description": "Reporte de cuentas por cobrar (GROUP BY/HAVING); formato=csv descarga archivo. Responsable: Rodrigo.",
         "x-owner": "Rodrigo",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          {
+            "name": "hasta",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "saldoMinimo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "0.01"
+            }
+          },
+          {
+            "name": "formato",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON o CSV con los mismos filtros y totales",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosReporte"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtros inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
           }
         }
       }
@@ -235,10 +611,10 @@
         "tags": [
           "pagos"
         ],
-        "summary": "GET /mi/estado-cuenta",
-        "description": "Responsable: Rodrigo. Implementación pendiente. Exportar getMyAccount desde pagos.controller.ts.",
+        "summary": "Estado de cuenta del paciente autenticado",
+        "description": "Estado de cuenta del paciente autenticado. Responsable: Rodrigo.",
         "x-owner": "Rodrigo",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -246,17 +622,353 @@
         ],
         "parameters": [],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "200": {
+            "description": "Cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosEstadoCuenta"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "403": {
+            "description": "Sin permiso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pagosError"
+                }
+              }
+            }
           }
         }
       }
     }
   },
   "components": {
-    "schemas": {}
+    "schemas": {
+      "pagosError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "mensaje": {
+                "type": "string"
+              },
+              "detalles": {
+                "type": "array",
+                "items": {}
+              }
+            }
+          }
+        }
+      },
+      "pagosMetodo": {
+        "type": "object",
+        "properties": {
+          "id_metodopago": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        }
+      },
+      "pagosMetodoInput": {
+        "type": "object",
+        "required": [
+          "nombre"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "maxLength": 60
+          }
+        }
+      },
+      "pagosDocumentoInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "tipo",
+              "serie"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "tipo": {
+                "const": "boleta"
+              },
+              "serie": {
+                "type": "string"
+              },
+              "numero": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,18}$"
+              },
+              "nombre_receptor": {
+                "type": "string"
+              },
+              "documento_receptor": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "tipo",
+              "serie",
+              "razon_social_receptor",
+              "ruc_receptor"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "tipo": {
+                "const": "factura"
+              },
+              "serie": {
+                "type": "string"
+              },
+              "numero": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,18}$"
+              },
+              "razon_social_receptor": {
+                "type": "string"
+              },
+              "ruc_receptor": {
+                "type": "string",
+                "pattern": "^[0-9]{11}$"
+              }
+            }
+          }
+        ]
+      },
+      "pagosPagoInput": {
+        "type": "object",
+        "required": [
+          "id_obligacion",
+          "id_metodopago",
+          "importe"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id_obligacion": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "id_metodopago": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "importe": {
+            "type": "string",
+            "description": "Decimal > 0, hasta 2 decimales"
+          },
+          "referencia": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "documento": {
+            "$ref": "#/components/schemas/pagosDocumentoInput"
+          }
+        }
+      },
+      "pagosPagoCreado": {
+        "type": "object",
+        "properties": {
+          "id_pago": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "fecha_hora": {
+            "type": "string"
+          },
+          "importe": {
+            "type": "string",
+            "pattern": "^-?\\d+\\.\\d{2}$"
+          },
+          "saldo_restante": {
+            "type": "string",
+            "pattern": "^-?\\d+\\.\\d{2}$"
+          },
+          "documento": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "pagosPago": {
+        "type": "object",
+        "properties": {
+          "id_pago": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "fecha_hora": {
+            "type": "string"
+          },
+          "importe": {
+            "type": "string",
+            "pattern": "^-?\\d+\\.\\d{2}$"
+          },
+          "referencia": {
+            "type": "string",
+            "nullable": true
+          },
+          "id_obligacion": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "metodo": {
+            "type": "string"
+          },
+          "id_paciente": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "paciente": {
+            "type": "string"
+          },
+          "comprobante": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "pagosEstadoCuenta": {
+        "type": "object",
+        "properties": {
+          "id_paciente": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,18}$"
+          },
+          "paciente": {
+            "type": "string"
+          },
+          "obligado": {
+            "type": "string",
+            "pattern": "^-?\\d+\\.\\d{2}$"
+          },
+          "pagado": {
+            "type": "string",
+            "pattern": "^-?\\d+\\.\\d{2}$"
+          },
+          "saldo": {
+            "type": "string",
+            "pattern": "^-?\\d+\\.\\d{2}$"
+          },
+          "obligaciones": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "pagosComprobante": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "enum": [
+              "boleta",
+              "factura"
+            ]
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "serie": {
+            "type": "string"
+          },
+          "numero": {
+            "type": "string"
+          },
+          "fecha_emision": {
+            "type": "string"
+          },
+          "receptor": {
+            "type": "string"
+          },
+          "documento_receptor": {
+            "type": "string",
+            "nullable": true
+          },
+          "importe": {
+            "type": "string",
+            "pattern": "^-?\\d+\\.\\d{2}$"
+          }
+        }
+      },
+      "pagosReporte": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id_paciente": {
+                  "type": "string",
+                  "pattern": "^[1-9][0-9]{0,18}$"
+                },
+                "paciente": {
+                  "type": "string"
+                },
+                "obligaciones": {
+                  "type": "string"
+                },
+                "obligado": {
+                  "type": "string",
+                  "pattern": "^-?\\d+\\.\\d{2}$"
+                },
+                "pagado": {
+                  "type": "string",
+                  "pattern": "^-?\\d+\\.\\d{2}$"
+                },
+                "saldo": {
+                  "type": "string",
+                  "pattern": "^-?\\d+\\.\\d{2}$"
+                }
+              }
+            }
+          },
+          "totales": {
+            "type": "object"
+          }
+        }
+      }
+    }
   }
 }
