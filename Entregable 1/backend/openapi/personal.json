@@ -6,33 +6,57 @@
         "tags": [
           "personal"
         ],
-        "summary": "POST /empleados",
-        "description": "Responsable: Josenrique. Implementación pendiente. Exportar createEmployee desde personal.controller.ts.",
+        "summary": "Crear un empleado con su subtipo",
+        "description": "Administrador. Inserta EMPLEADO y exactamente un subtipo (ODONTOLOGO con colegiatura o PERSONAL_APOYO con cargo) en una transacción; si falla el subtipo no queda el empleado.",
         "x-owner": "Josenrique",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
-          },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
-          }
-        },
         "requestBody": {
           "required": true,
-          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/personalAltaEmpleado"
               }
             }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Empleado creado con su subtipo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalEmpleado"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/personalEntrada"
+          },
+          "401": {
+            "$ref": "#/components/responses/personalSesion"
+          },
+          "403": {
+            "$ref": "#/components/responses/personalPermiso"
+          },
+          "409": {
+            "description": "DOCUMENTO_DUPLICADO, COLEGIATURA_DUPLICADA o SUBTIPO_INVALIDO.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalError"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/personalInterno"
           }
         }
       },
@@ -41,22 +65,90 @@
         "tags": [
           "personal"
         ],
-        "summary": "GET /empleados",
-        "description": "Responsable: Josenrique. Implementación pendiente. Exportar listEmployees desde personal.controller.ts.",
+        "summary": "Listar el personal",
+        "description": "Administrador. Búsqueda literal por nombre o documento, filtros de estado y subtipo, paginación.",
         "x-owner": "Josenrique",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Texto literal en nombres, apellidos o documento.",
+            "schema": {
+              "type": "string"
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          {
+            "in": "query",
+            "name": "estado",
+            "required": false,
+            "description": "Estado.",
+            "schema": {
+              "$ref": "#/components/schemas/personalEstado"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subtipo",
+            "required": false,
+            "description": "Subtipo.",
+            "schema": {
+              "$ref": "#/components/schemas/personalSubtipo"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pagina",
+            "required": false,
+            "description": "Página, desde 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limite",
+            "required": false,
+            "description": "Filas por página.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de empleados con su subtipo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalEmpleados"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/personalEntrada"
+          },
+          "401": {
+            "$ref": "#/components/responses/personalSesion"
+          },
+          "403": {
+            "$ref": "#/components/responses/personalPermiso"
+          },
+          "500": {
+            "$ref": "#/components/responses/personalInterno"
           }
         }
       }
@@ -67,10 +159,10 @@
         "tags": [
           "personal"
         ],
-        "summary": "GET /empleados/:id",
-        "description": "Responsable: Josenrique. Implementación pendiente. Exportar getEmployee desde personal.controller.ts.",
+        "summary": "Consultar la ficha de un empleado",
+        "description": "Administrador, o el propio empleado cuando su rol tiene el permiso de alcance propio.",
         "x-owner": "Josenrique",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -81,17 +173,44 @@
             "in": "path",
             "name": "id",
             "required": true,
+            "description": "Identificador BIGINT enviado como cadena.",
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/personalId"
             }
           }
         ],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "200": {
+            "description": "Ficha con subtipo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalEmpleado"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "400": {
+            "$ref": "#/components/responses/personalEntrada"
+          },
+          "401": {
+            "$ref": "#/components/responses/personalSesion"
+          },
+          "403": {
+            "$ref": "#/components/responses/personalPermiso"
+          },
+          "404": {
+            "description": "EMPLEADO_NO_EXISTE.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalError"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/personalInterno"
           }
         }
       },
@@ -100,10 +219,10 @@
         "tags": [
           "personal"
         ],
-        "summary": "PATCH /empleados/:id",
-        "description": "Responsable: Josenrique. Implementación pendiente. Exportar updateEmployee desde personal.controller.ts.",
+        "summary": "Modificar datos y estado de un empleado",
+        "description": "Administrador. No cambia el subtipo ni el identificador: numero_colegiatura solo se acepta para odontólogos y cargo para personal de apoyo.",
         "x-owner": "Josenrique",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -114,28 +233,64 @@
             "in": "path",
             "name": "id",
             "required": true,
+            "description": "Identificador BIGINT enviado como cadena.",
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/personalId"
             }
           }
         ],
-        "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
-          },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
-          }
-        },
         "requestBody": {
           "required": true,
-          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/personalCambioEmpleado"
               }
             }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Empleado actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalEmpleado"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/personalEntrada"
+          },
+          "401": {
+            "$ref": "#/components/responses/personalSesion"
+          },
+          "403": {
+            "$ref": "#/components/responses/personalPermiso"
+          },
+          "404": {
+            "description": "EMPLEADO_NO_EXISTE.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SUBTIPO_INCOMPATIBLE, DOCUMENTO_DUPLICADO o COLEGIATURA_DUPLICADA.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalError"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/personalInterno"
           }
         }
       }
@@ -146,22 +301,72 @@
         "tags": [
           "personal"
         ],
-        "summary": "GET /odontologos",
-        "description": "Responsable: Josenrique. Implementación pendiente. Exportar listDentists desde personal.controller.ts.",
+        "summary": "Listar odontólogos activos",
+        "description": "Profesionales activos con colegiatura que pueden asignarse a un plan. No depende de citas ni especialidades.",
         "x-owner": "Josenrique",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Texto literal en nombres, apellidos o colegiatura.",
+            "schema": {
+              "type": "string"
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          {
+            "in": "query",
+            "name": "pagina",
+            "required": false,
+            "description": "Página, desde 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limite",
+            "required": false,
+            "description": "Filas por página.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de odontólogos activos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalOdontologos"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/personalEntrada"
+          },
+          "401": {
+            "$ref": "#/components/responses/personalSesion"
+          },
+          "403": {
+            "$ref": "#/components/responses/personalPermiso"
+          },
+          "500": {
+            "$ref": "#/components/responses/personalInterno"
           }
         }
       }
@@ -172,22 +377,72 @@
         "tags": [
           "personal"
         ],
-        "summary": "GET /tratamientos",
-        "description": "Responsable: Josenrique. Implementación pendiente. Exportar listTreatments desde personal.controller.ts.",
+        "summary": "Consultar el catálogo de tratamientos",
+        "description": "Personal autorizado. Precio referencial de catálogo, no una ejecución clínica.",
         "x-owner": "Josenrique",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Texto literal en nombre o descripción.",
+            "schema": {
+              "type": "string"
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          {
+            "in": "query",
+            "name": "pagina",
+            "required": false,
+            "description": "Página, desde 1.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limite",
+            "required": false,
+            "description": "Filas por página.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página del catálogo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalTratamientos"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/personalEntrada"
+          },
+          "401": {
+            "$ref": "#/components/responses/personalSesion"
+          },
+          "403": {
+            "$ref": "#/components/responses/personalPermiso"
+          },
+          "500": {
+            "$ref": "#/components/responses/personalInterno"
           }
         }
       },
@@ -196,33 +451,57 @@
         "tags": [
           "personal"
         ],
-        "summary": "POST /tratamientos",
-        "description": "Responsable: Josenrique. Implementación pendiente. Exportar createTreatment desde personal.controller.ts.",
+        "summary": "Registrar un tratamiento de catálogo",
+        "description": "Administrador u odontólogo. Nombre único sin distinguir mayúsculas y precio no negativo.",
         "x-owner": "Josenrique",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
-          },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
-          }
-        },
         "requestBody": {
           "required": true,
-          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/personalAltaTratamiento"
               }
             }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tratamiento creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalTratamiento"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/personalEntrada"
+          },
+          "401": {
+            "$ref": "#/components/responses/personalSesion"
+          },
+          "403": {
+            "$ref": "#/components/responses/personalPermiso"
+          },
+          "409": {
+            "description": "TRATAMIENTO_DUPLICADO.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalError"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/personalInterno"
           }
         }
       }
@@ -233,10 +512,10 @@
         "tags": [
           "personal"
         ],
-        "summary": "PATCH /tratamientos/:id",
-        "description": "Responsable: Josenrique. Implementación pendiente. Exportar updateTreatment desde personal.controller.ts.",
+        "summary": "Actualizar nombre, descripción o precio de catálogo",
+        "description": "Administrador u odontólogo. No modifica el precio_acordado de los detalles de plan ya creados.",
         "x-owner": "Josenrique",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -247,34 +526,567 @@
             "in": "path",
             "name": "id",
             "required": true,
+            "description": "Identificador BIGINT enviado como cadena.",
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/personalId"
             }
           }
         ],
-        "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
-          },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
-          }
-        },
         "requestBody": {
           "required": true,
-          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/personalCambioTratamiento"
               }
             }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tratamiento actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalTratamiento"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/personalEntrada"
+          },
+          "401": {
+            "$ref": "#/components/responses/personalSesion"
+          },
+          "403": {
+            "$ref": "#/components/responses/personalPermiso"
+          },
+          "404": {
+            "description": "TRATAMIENTO_NO_EXISTE.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "TRATAMIENTO_DUPLICADO.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/personalError"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/personalInterno"
           }
         }
       }
     }
   },
   "components": {
-    "schemas": {}
+    "schemas": {
+      "personalId": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]{0,18}$",
+        "description": "BIGINT positivo como cadena."
+      },
+      "personalEstado": {
+        "type": "string",
+        "enum": [
+          "activo",
+          "inactivo"
+        ]
+      },
+      "personalSubtipo": {
+        "type": "string",
+        "enum": [
+          "odontologo",
+          "apoyo"
+        ]
+      },
+      "personalEmpleado": {
+        "type": "object",
+        "required": [
+          "id_empleado",
+          "tipo_documento",
+          "numero_documento",
+          "nombres",
+          "apellidos",
+          "telefono",
+          "estado",
+          "subtipo",
+          "numero_colegiatura",
+          "cargo"
+        ],
+        "properties": {
+          "id_empleado": {
+            "$ref": "#/components/schemas/personalId"
+          },
+          "tipo_documento": {
+            "type": "string"
+          },
+          "numero_documento": {
+            "type": "string"
+          },
+          "nombres": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          },
+          "estado": {
+            "$ref": "#/components/schemas/personalEstado"
+          },
+          "subtipo": {
+            "$ref": "#/components/schemas/personalSubtipo"
+          },
+          "numero_colegiatura": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Solo odontólogos."
+          },
+          "cargo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Solo personal de apoyo."
+          }
+        }
+      },
+      "personalAltaEmpleado": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tipo_documento",
+          "numero_documento",
+          "nombres",
+          "apellidos",
+          "telefono",
+          "subtipo"
+        ],
+        "properties": {
+          "tipo_documento": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "description": "Se guarda en mayúsculas."
+          },
+          "numero_documento": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-]{1,30}$"
+          },
+          "nombres": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "apellidos": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "telefono": {
+            "type": "string",
+            "pattern": "^\\+?[0-9][0-9 -]{5,23}$"
+          },
+          "estado": {
+            "$ref": "#/components/schemas/personalEstado"
+          },
+          "subtipo": {
+            "$ref": "#/components/schemas/personalSubtipo"
+          },
+          "numero_colegiatura": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30,
+            "description": "Obligatorio si subtipo = odontologo."
+          },
+          "cargo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Obligatorio si subtipo = apoyo."
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "subtipo": {
+                "const": "odontologo"
+              }
+            },
+            "required": [
+              "numero_colegiatura"
+            ],
+            "not": {
+              "required": [
+                "cargo"
+              ]
+            }
+          },
+          {
+            "properties": {
+              "subtipo": {
+                "const": "apoyo"
+              }
+            },
+            "required": [
+              "cargo"
+            ],
+            "not": {
+              "required": [
+                "numero_colegiatura"
+              ]
+            }
+          }
+        ]
+      },
+      "personalCambioEmpleado": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "tipo_documento": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20,
+            "description": "Se guarda en mayúsculas."
+          },
+          "numero_documento": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-]{1,30}$"
+          },
+          "nombres": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "apellidos": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "telefono": {
+            "type": "string",
+            "pattern": "^\\+?[0-9][0-9 -]{5,23}$"
+          },
+          "estado": {
+            "$ref": "#/components/schemas/personalEstado"
+          },
+          "numero_colegiatura": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30,
+            "description": "Solo si el empleado ya es odontólogo."
+          },
+          "cargo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Solo si ya es personal de apoyo."
+          }
+        },
+        "not": {
+          "required": [
+            "numero_colegiatura",
+            "cargo"
+          ]
+        }
+      },
+      "personalEmpleados": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "total_paginas"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/personalEmpleado"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "limite": {
+            "type": "integer"
+          },
+          "total_paginas": {
+            "type": "integer"
+          }
+        }
+      },
+      "personalOdontologo": {
+        "type": "object",
+        "required": [
+          "id_empleado",
+          "nombres",
+          "apellidos",
+          "numero_colegiatura",
+          "telefono"
+        ],
+        "properties": {
+          "id_empleado": {
+            "$ref": "#/components/schemas/personalId"
+          },
+          "nombres": {
+            "type": "string"
+          },
+          "apellidos": {
+            "type": "string"
+          },
+          "numero_colegiatura": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          }
+        }
+      },
+      "personalOdontologos": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "total_paginas"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/personalOdontologo"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "limite": {
+            "type": "integer"
+          },
+          "total_paginas": {
+            "type": "integer"
+          }
+        }
+      },
+      "personalTratamiento": {
+        "type": "object",
+        "required": [
+          "id_tratamiento",
+          "nombre",
+          "descripcion",
+          "precio_referencial"
+        ],
+        "properties": {
+          "id_tratamiento": {
+            "$ref": "#/components/schemas/personalId"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "precio_referencial": {
+            "type": "string",
+            "description": "NUMERIC(12,2) como cadena, por ejemplo \"120.00\"."
+          }
+        }
+      },
+      "personalTratamientos": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "pagina",
+          "limite",
+          "total_paginas"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/personalTratamiento"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pagina": {
+            "type": "integer"
+          },
+          "limite": {
+            "type": "integer"
+          },
+          "total_paginas": {
+            "type": "integer"
+          }
+        }
+      },
+      "personalAltaTratamiento": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nombre",
+          "precio_referencial"
+        ],
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "descripcion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "precio_referencial": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{1,10}(\\.[0-9]{1,2})?$"
+              },
+              {
+                "type": "number",
+                "minimum": 0
+              }
+            ],
+            "description": "Importe no negativo con hasta dos decimales."
+          }
+        }
+      },
+      "personalCambioTratamiento": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 150
+          },
+          "descripcion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "null borra la descripción."
+          },
+          "precio_referencial": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{1,10}(\\.[0-9]{1,2})?$"
+              },
+              {
+                "type": "number",
+                "minimum": 0
+              }
+            ],
+            "description": "Importe no negativo con hasta dos decimales."
+          }
+        }
+      },
+      "personalError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "codigo",
+              "mensaje",
+              "detalles"
+            ],
+            "properties": {
+              "codigo": {
+                "type": "string"
+              },
+              "mensaje": {
+                "type": "string"
+              },
+              "detalles": {
+                "type": "array",
+                "items": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "personalEntrada": {
+        "description": "ENTRADA_INVALIDA: cuerpo, identificador o filtro no válido.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/personalError"
+            }
+          }
+        }
+      },
+      "personalSesion": {
+        "description": "SESION_INVALIDA: falta el token o no es válido.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/personalError"
+            }
+          }
+        }
+      },
+      "personalPermiso": {
+        "description": "ACCESO_DENEGADO: el rol no tiene el permiso o el registro no es propio.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/personalError"
+            }
+          }
+        }
+      },
+      "personalInterno": {
+        "description": "ERROR_INTERNO.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/personalError"
+            }
+          }
+        }
+      }
+    }
   }
 }
