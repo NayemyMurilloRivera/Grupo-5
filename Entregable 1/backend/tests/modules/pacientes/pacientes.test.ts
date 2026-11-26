@@ -3,8 +3,10 @@ import { randomBytes } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { createPatient } from '../../../src/application/use-cases/pacientes/createPatient.js'
+import { updatePatient } from '../../../src/application/use-cases/pacientes/updatePatient.js'
+import { deleteContact } from '../../../src/application/use-cases/pacientes/deleteContact.js'
 import { getPatient } from '../../../src/application/use-cases/pacientes/getPatient.js'
-import { createPatientInput, listPatientsInput, patientId, patientScope } from '../../../src/interfaces/http/validators/pacientes.validator.js'
+import { createPatientInput, updatePatientInput, listPatientsInput, patientId, patientScope } from '../../../src/interfaces/http/validators/pacientes.validator.js'
 
 const isError = (status: number) => (error: unknown) =>
   error instanceof Error && 'status' in error && error.status === status
@@ -70,9 +72,32 @@ test('el caso de uso no registra pacientes sin alcance global ni antecedentes si
     antecedentes: [{ tipo: 'Alergia', descripcion: 'Dato de prueba' }] }), { alcance: 'global' }), isError(403))
 })
 
+test('la modificación valida campos parciales y referencias a contactos sin aceptar cambios de titular', () => {
+  assert.deepEqual(updatePatientInput({ telefono: '900130001' }), { telefono: '900130001' })
+  assert.deepEqual(updatePatientInput({ correo: '', direccion: null, fecha_nacimiento: null }),
+    { correo: null, direccion: null, fecha_nacimiento: null })
+  assert.deepEqual(updatePatientInput({ contactos: [{ id_contacto: '9007199254740993', telefono: '900130002' }] }),
+    { contactos: [{ id_contacto: '9007199254740993', telefono: '900130002' }] })
+  for (const input of [{}, { id_paciente: '2' }, { historia: {} }, { antecedentes: [] }, { nombres: null },
+    { telefono: '' }, { correo: 'no-es-correo' }, { fecha_nacimiento: '2999-01-01' }, { fecha_nacimiento: '2025-02-29' },
+    { contactos: null }, { contactos: [{ id_contacto: '1' }] }, { contactos: [{ nombre: 'Incompleto' }] },
+    { contactos: [{ id_contacto: '1', telefono: '900130002', id_paciente: '2' }] },
+    { contactos: [{ id_contacto: '1', telefono: '900130002' }, { id_contacto: 1, nombre: 'Duplicado' }] },
+    { contactos: [{ id_contacto: '9223372036854775808', telefono: '900130002' }] }]) {
+    assert.throws(() => updatePatientInput(input), isError(400))
+  }
+})
+
+test('las modificaciones informan que un paciente no está disponible dentro de su alcance', async () => {
+  await assert.rejects(updatePatient({ updatePatient: async () => null }, '1', { telefono: '900130001' },
+    { alcance: 'propio', idPaciente: '2' }), isError(404))
+  await assert.rejects(deleteContact({ deleteContact: async () => false }, '1', '1',
+    { alcance: 'asignado', idEmpleado: '3' }), isError(404))
+})
+
 const databaseUrl = process.env.PATIENTS_TEST_DATABASE_URL
 
-test('consultas y altas de pacientes con PostgreSQL y autorización reales', { skip: !databaseUrl }, async t => {
+test('gestión de pacientes con PostgreSQL y autorización reales', { skip: !databaseUrl }, async t => {
   const url = new URL(databaseUrl!)
   assert.equal(url.protocol, 'postgresql:')
   assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) && url.pathname.includes('prueba'),
@@ -361,5 +386,140 @@ test('consultas y altas de pacientes con PostgreSQL y autorización reales', { s
     const after = await counts()
     assert.equal(after.pacientes, before.pacientes + 1); assert.equal(after.historias, before.historias + 1)
     assert.equal(after.contactos, before.contactos); assert.equal(after.antecedentes, before.antecedentes)
+  })
+
+  async function changePatient(path: string, status: number, body?: unknown, token = tokens.admin, method = 'PATCH') {
+    const response = await fetch(base + path, { method, headers: {
+      Authorization: 'Bearer ' + token, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
+    assert.equal(response.status, status, path + ': ' + await response.clone().text())
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    if (status === 204) { assert.equal(await response.text(), ''); assert.equal(response.headers.get('content-type'), null); return }
+    return response.json()
+  }
+  const editable = await postPatient({ ...basePatient, numero_documento: '99130001', fecha_nacimiento: '1999-05-01',
+    contactos: [{ nombre: 'Contacto principal', parentesco: 'Hermana', telefono: '900130002' },
+      { nombre: 'Contacto secundario', parentesco: 'Padre', telefono: '900130003' }],
+    antecedentes: [{ tipo: 'Otro', descripcion: 'Antecedente que se conserva' }] }, 201)
+  const editablePath = '/pacientes/' + editable.id_paciente
+  const contactId = editable.contactos[0].id_contacto as string
+  const foreignContact = (await pool.query('SELECT id_contacto FROM sis_god."CONTACTO" WHERE id_paciente=$1', [other])).rows[0].id_contacto as string
+  const initialHistory = (await pool.query('SELECT * FROM sis_god."HISTORIA_CLINICA" WHERE id_paciente=$1', [editable.id_paciente])).rows
+
+  await t.test('la actualización parcial conserva campos y modifica/agrega solo los contactos enviados', async () => {
+    const changed = await changePatient(editablePath, 200, { nombres: 'Paciente actualizado', correo: 'ACTUALIZADO@example.invalid',
+      contactos: [{ id_contacto: contactId, telefono: '900130004' },
+        { nombre: 'Contacto agregado', parentesco: 'Otro', telefono: '900130005' }] }, tokens.recepcion)
+    assert.equal(changed.nombres, 'Paciente actualizado'); assert.equal(changed.apellidos, editable.apellidos)
+    assert.equal(changed.correo, 'actualizado@example.invalid'); assert.equal(changed.contactos.length, 3)
+    const contact = changed.contactos.find((c: { id_contacto: string }) => c.id_contacto === contactId)
+    assert.equal(contact.telefono, '900130004'); assert.equal(contact.nombre, 'Contacto principal')
+    assert.ok(changed.contactos.some((c: { id_contacto: string }) => c.id_contacto === editable.contactos[1].id_contacto))
+    assert.deepEqual(await request(editablePath, 200, tokens.admin), changed)
+  })
+
+  await t.test('los valores nulos explícitos limpian datos opcionales sin borrar campos omitidos', async () => {
+    const before = await request(editablePath, 200, tokens.admin)
+    const changed = await changePatient(editablePath, 200, { correo: null, direccion: '', fecha_nacimiento: null, contactos: [] })
+    assert.equal(changed.correo, null); assert.equal(changed.direccion, null); assert.equal(changed.fecha_nacimiento, null)
+    assert.equal(changed.telefono, before.telefono); assert.deepEqual(changed.contactos, before.contactos)
+  })
+
+  await t.test('documentos duplicados y contactos ajenos o inexistentes no dejan modificaciones parciales', async () => {
+    const before = await request(editablePath, 200, tokens.admin)
+    const totals = await counts()
+    assert.equal((await changePatient(editablePath, 409, { tipo_documento: 'DNI', numero_documento: '99010001',
+      contactos: [{ nombre: 'No debe guardarse', parentesco: 'Otro', telefono: '900130006' }] })).error.codigo, 'DOCUMENTO_DUPLICADO')
+    for (const id of [foreignContact, '9223372036854775807']) {
+      assert.equal((await changePatient(editablePath, 404, { nombres: 'No debe cambiar', contactos: [{ id_contacto: id, telefono: '900130007' }] })).error.codigo, 'CONTACTO_NO_EXISTE')
+    }
+    assert.deepEqual(await request(editablePath, 200, tokens.admin), before); assert.deepEqual(await counts(), totals)
+  })
+
+  await t.test('un error al agregar un contacto revierte los cambios de paciente y contactos previos', async () => {
+    const before = await request(editablePath, 200, tokens.admin)
+    const totals = await counts()
+    await pool.query(`CREATE FUNCTION sis_god.prueba_contacto_patch() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Contacto rechazado durante actualización'; END $$;
+      CREATE TRIGGER prueba_contacto_patch BEFORE INSERT ON sis_god."CONTACTO"
+      FOR EACH ROW WHEN (NEW.nombre = 'Contacto rechazado') EXECUTE FUNCTION sis_god.prueba_contacto_patch()`)
+    try {
+      await changePatient(editablePath, 500, { telefono: '900130008', contactos: [
+        { id_contacto: contactId, nombre: 'No debe cambiar' },
+        { nombre: 'Contacto rechazado', parentesco: 'Otro', telefono: '900130009' }] })
+      assert.deepEqual(await request(editablePath, 200, tokens.admin), before); assert.deepEqual(await counts(), totals)
+    } finally {
+      await pool.query('DROP TRIGGER prueba_contacto_patch ON sis_god."CONTACTO"; DROP FUNCTION sis_god.prueba_contacto_patch()')
+    }
+  })
+
+  await t.test('la baja comprueba pertenencia y devuelve 204 sin eliminar al paciente ni su historia', async () => {
+    const before = await counts()
+    const secondary = editable.contactos[1].id_contacto
+    const path = editablePath + '/contactos/' + secondary
+    await changePatient(editablePath + '/contactos/' + foreignContact, 404, undefined, tokens.recepcion, 'DELETE')
+    await changePatient(path, 204, undefined, tokens.recepcion, 'DELETE')
+    await changePatient(path, 404, undefined, tokens.recepcion, 'DELETE')
+    const after = await counts()
+    assert.deepEqual(after, { ...before, contactos: before.contactos - 1 })
+    assert.equal((await request(editablePath, 200, tokens.admin)).contactos.length, 2)
+    assert.deepEqual((await pool.query('SELECT * FROM sis_god."HISTORIA_CLINICA" WHERE id_paciente=$1', [editable.id_paciente])).rows, initialHistory)
+    assert.equal((await pool.query('SELECT 1 FROM sis_god."CONTACTO" WHERE id_contacto=$1 AND id_paciente=$2', [foreignContact, other])).rowCount, 1)
+  })
+
+  await t.test('las modificaciones respetan los permisos y el alcance asignado del odontólogo', async () => {
+    const ownContact = (await pool.query('SELECT id_contacto FROM sis_god."CONTACTO" WHERE id_paciente=$1', [owner])).rows[0].id_contacto
+    for (const role of ['paciente', 'asistente', 'odontologo']) {
+      await changePatient('/pacientes/' + owner, 403, { telefono: '900130010' }, tokens[role])
+      await changePatient('/pacientes/' + owner + '/contactos/' + ownContact, 403, undefined, tokens[role], 'DELETE')
+    }
+    const { rows: [permission] } = await pool.query(`INSERT INTO sis_god."PERMISO" (recurso,accion,alcance)
+      VALUES ('pacientes','actualizar','asignado') RETURNING id_permiso`)
+    await pool.query('INSERT INTO sis_god."ROL_PERMISO" (id_rol,id_permiso) VALUES ($1,$2)', [roleId('Odontólogo'), permission.id_permiso])
+    try {
+      await changePatient('/pacientes/' + owner, 200, { telefono: '900130011' }, tokens.odontologo)
+      await changePatient('/pacientes/' + other, 403, { telefono: '900130011' }, tokens.odontologo)
+      await changePatient('/pacientes/' + owner, 404, { contactos: [{ id_contacto: foreignContact, telefono: '900130011' }] }, tokens.odontologo)
+    } finally { await pool.query('DELETE FROM sis_god."PERMISO" WHERE id_permiso=$1', [permission.id_permiso]) }
+    const { patientRepository } = await import('../../../src/infrastructure/database/sql/repositories/pacientes.repository.js')
+    assert.equal(await patientRepository.updatePatient(other, { telefono: '900130012' }, { alcance: 'propio', idPaciente: owner }), null)
+    assert.equal(await patientRepository.deleteContact(other, foreignContact, { alcance: 'asignado', idEmpleado: dentist }), false)
+  })
+
+  await t.test('dos modificaciones simultáneas de campos diferentes conservan ambos cambios', async () => {
+    await Promise.all([
+      changePatient(editablePath, 200, { telefono: '900130013', contactos: [{ id_contacto: contactId, nombre: 'Nombre concurrente' }] }),
+      changePatient(editablePath, 200, { direccion: 'Dirección concurrente', contactos: [{ id_contacto: contactId, telefono: '900130014' }] }),
+    ])
+    const changed = await request(editablePath, 200, tokens.admin)
+    assert.equal(changed.telefono, '900130013'); assert.equal(changed.direccion, 'Dirección concurrente')
+    const contact = changed.contactos.find((c: { id_contacto: string }) => c.id_contacto === contactId)
+    assert.equal(contact.nombre, 'Nombre concurrente'); assert.equal(contact.telefono, '900130014')
+  })
+
+  await t.test('un error diferido al confirmar revierte también una modificación del agregado', async () => {
+    const before = await request(editablePath, 200, tokens.admin)
+    const totals = await counts()
+    await pool.query(`CREATE FUNCTION sis_god.prueba_patch_commit() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Confirmación rechazada durante actualización'; END $$;
+      CREATE CONSTRAINT TRIGGER prueba_patch_commit AFTER UPDATE ON sis_god."PACIENTE"
+      DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN (NEW.telefono = '900139999')
+      EXECUTE FUNCTION sis_god.prueba_patch_commit()`)
+    try {
+      await changePatient(editablePath, 500, { telefono: '900139999', contactos: [{ id_contacto: contactId, nombre: 'No confirmar' }] })
+      assert.deepEqual(await request(editablePath, 200, tokens.admin), before); assert.deepEqual(await counts(), totals)
+    } finally { await pool.query('DROP TRIGGER prueba_patch_commit ON sis_god."PACIENTE"; DROP FUNCTION sis_god.prueba_patch_commit()') }
+  })
+
+  await t.test('modificaciones inválidas e identificadores inexistentes reciben errores específicos', async () => {
+    await changePatient('/pacientes/0', 400, { telefono: '900130015' })
+    await changePatient(editablePath, 400, {})
+    await changePatient(editablePath, 400, { id_paciente: other })
+    await changePatient(editablePath, 400, { fecha_nacimiento: '2999-01-01' })
+    await changePatient('/pacientes/9223372036854775807', 404, { telefono: '900130015' })
+    await changePatient(editablePath + '/contactos/no-es-id', 400, undefined, tokens.admin, 'DELETE')
+    await changePatient('/pacientes/9223372036854775807/contactos/1', 404, undefined, tokens.admin, 'DELETE')
+    const response = await fetch(base + editablePath, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+    assert.equal(response.status, 401)
   })
 })

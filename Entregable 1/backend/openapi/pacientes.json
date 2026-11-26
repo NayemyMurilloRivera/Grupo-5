@@ -315,10 +315,10 @@
         "tags": [
           "pacientes"
         ],
-        "summary": "PATCH /pacientes/:id",
-        "description": "Responsable: Erick. Implementación pendiente. Exportar updatePatient desde pacientes.controller.ts.",
+        "summary": "Actualizar datos administrativos y contactos de un paciente",
+        "description": "Modifica únicamente los campos enviados. null limpia los datos opcionales; no se aceptan identificadores de paciente, historia ni antecedentes. Los contactos con id_contacto deben pertenecer al paciente y pueden modificarse parcialmente; los nuevos requieren nombre, parentesco y teléfono. El paciente se bloquea durante la transacción para coordinar cambios concurrentes. Se aplica el alcance autorizado por Seguridad.",
         "x-owner": "Erick",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -330,25 +330,104 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$",
+              "description": "Identificador bigint representado como texto para conservar su precisión."
             }
           }
         ],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "200": {
+            "description": "Datos administrativos y todos los contactos tras confirmar los cambios.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesDetalle"
+                }
+              }
+            }
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "400": {
+            "description": "Datos o identificadores inválidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sesión ausente o inválida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permiso o alcance insuficiente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Paciente no disponible o contacto inexistente/ajeno al paciente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "El tipo y número de documento ya pertenecen a otro paciente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "No se confirmó la operación; los cambios se revierten.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
           }
         },
         "requestBody": {
           "required": true,
-          "description": "Completar el esquema específico durante la implementación; ver docs/ENDPOINTS.md.",
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/pacientesModificacion"
+              },
+              "example": {
+                "telefono": "900130001",
+                "contactos": [
+                  {
+                    "id_contacto": "1",
+                    "telefono": "900130002"
+                  },
+                  {
+                    "nombre": "Familiar de prueba",
+                    "parentesco": "Hermana",
+                    "telefono": "900130003"
+                  }
+                ]
               }
             }
           }
@@ -488,10 +567,10 @@
         "tags": [
           "pacientes"
         ],
-        "summary": "DELETE /pacientes/:id/contactos/:contactoId",
-        "description": "Responsable: Erick. Implementación pendiente. Exportar deleteContact desde pacientes.controller.ts.",
+        "summary": "Eliminar un contacto del paciente",
+        "description": "Comprueba el permiso contactos/eliminar, el alcance y la pertenencia del contacto. Elimina únicamente el contacto indicado, preservando al paciente, su historia y sus antecedentes. Un contacto ya eliminado devuelve 404 para acceso global; la autorización restringida puede devolver 403 sin revelar su existencia.",
         "x-owner": "Erick",
-        "x-status": "pending",
+        "x-status": "implemented",
         "security": [
           {
             "bearerAuth": []
@@ -503,7 +582,9 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$",
+              "description": "Identificador bigint representado como texto para conservar su precisión."
             }
           },
           {
@@ -511,16 +592,65 @@
             "name": "contactoId",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,18}$",
+              "description": "Identificador bigint representado como texto para conservar su precisión."
             }
           }
         ],
         "responses": {
-          "501": {
-            "description": "ENDPOINT_PENDIENTE: controlador todavía vacío"
+          "204": {
+            "description": "Contacto eliminado; respuesta sin cuerpo."
           },
-          "503": {
-            "description": "Seguridad o conexión no disponible"
+          "400": {
+            "description": "Datos o identificadores inválidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sesión ausente o inválida.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permiso o alcance insuficiente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Paciente no disponible o contacto inexistente/ajeno al paciente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "No se confirmó la operación; los cambios se revierten.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/pacientesError"
+                }
+              }
+            }
           }
         }
       }
@@ -1002,6 +1132,116 @@
                 }
               }
             }
+          }
+        }
+      },
+      "pacientesContactoCambio": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/pacientesContactoInput"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 2,
+            "required": [
+              "id_contacto"
+            ],
+            "properties": {
+              "id_contacto": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,18}$",
+                "description": "Identificador bigint representado como texto para conservar su precisión."
+              },
+              "nombre": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 150
+              },
+              "parentesco": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "telefono": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 25
+              }
+            }
+          }
+        ]
+      },
+      "pacientesModificacion": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "tipo_documento": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "numero_documento": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "nombres": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "apellidos": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "telefono": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 25
+          },
+          "fecha_nacimiento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  ""
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fecha de nacimiento válida, sin fechas futuras."
+          },
+          "correo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 254,
+            "description": "Correo válido; se guarda en minúsculas. Vacío o ausente se guarda como null."
+          },
+          "direccion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 250
+          },
+          "contactos": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/pacientesContactoCambio"
+            },
+            "description": "Con id_contacto modifica campos del contacto propio; sin id agrega uno nuevo. Los omitidos se conservan y [] no elimina contactos."
           }
         }
       }

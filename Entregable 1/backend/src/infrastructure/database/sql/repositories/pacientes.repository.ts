@@ -1,4 +1,5 @@
 import type { Pool } from 'pg'
+import { contactNotFound } from '../../../../domain/pacientes/errors.js'
 import type { PatientRepository } from '../../../../application/ports/pacientes.repository.js'
 import type { Patient, PatientDetail, PatientScope, Contact, Antecedent } from '../../../../domain/pacientes/entities.js'
 import { pool } from '../connection.js'
@@ -21,8 +22,64 @@ function scopeValues(scope: PatientScope) {
     scope.alcance === 'asignado' ? scope.idEmpleado : null]
 }
 
+async function readPatient(source: Pick<Pool, 'query'>, id: string, scope: PatientScope) {
+  const { rows } = await source.query<PatientDetail>(`
+    SELECT ${columns}, COALESCE((
+      SELECT jsonb_agg(jsonb_build_object('id_contacto', c.id_contacto::text,
+        'nombre', c.nombre, 'parentesco', c.parentesco, 'telefono', c.telefono) ORDER BY c.id_contacto)
+      FROM sis_god."CONTACTO" c WHERE c.id_paciente = p.id_paciente
+    ), '[]'::jsonb) AS contactos
+    FROM sis_god."PACIENTE" p WHERE ${authorized} AND p.id_paciente = $4::bigint`,
+  [...scopeValues(scope), id])
+  return rows[0] ?? null
+}
+
 export function postgresPatientRepository(source: Pick<Pool, 'query' | 'connect'> = pool): PatientRepository {
   return {
+    updatePatient: (id, input, scope) => withTransaction(async client => {
+      // Bloquear primero al paciente mantiene un orden común para sus modificaciones y bajas de contactos.
+      const patient = await client.query(`SELECT p.id_paciente FROM sis_god."PACIENTE" p
+        WHERE ${authorized} AND p.id_paciente=$4::bigint FOR UPDATE OF p`, [...scopeValues(scope), id])
+      if (!patient.rowCount) return null
+      const contactIds = (input.contactos ?? []).flatMap(contact => 'id_contacto' in contact ? [contact.id_contacto] : [])
+      if (contactIds.length) {
+        const contacts = await client.query(`SELECT id_contacto FROM sis_god."CONTACTO"
+          WHERE id_paciente=$1 AND id_contacto=ANY($2::bigint[]) ORDER BY id_contacto FOR UPDATE`, [id, contactIds])
+        if (contacts.rowCount !== contactIds.length) throw contactNotFound()
+      }
+      const fields = ['tipo_documento', 'numero_documento', 'nombres', 'apellidos',
+        'fecha_nacimiento', 'telefono', 'correo', 'direccion'] as const
+      const changed = fields.filter(field => Object.hasOwn(input, field))
+      if (changed.length) {
+        const assignments = changed.map((field, index) => `${field}=$${index + 1}`).join(', ')
+        await client.query(`UPDATE sis_god."PACIENTE" SET ${assignments} WHERE id_paciente=$${changed.length + 1}`,
+          [...changed.map(field => input[field]), id])
+      }
+      for (const contact of input.contactos ?? []) {
+        if ('id_contacto' in contact) {
+          await client.query(`UPDATE sis_god."CONTACTO" SET
+            nombre=CASE WHEN $3::boolean THEN $4 ELSE nombre END,
+            parentesco=CASE WHEN $5::boolean THEN $6 ELSE parentesco END,
+            telefono=CASE WHEN $7::boolean THEN $8 ELSE telefono END
+            WHERE id_contacto=$1 AND id_paciente=$2`,
+          [contact.id_contacto, id, Object.hasOwn(contact, 'nombre'), contact.nombre,
+            Object.hasOwn(contact, 'parentesco'), contact.parentesco, Object.hasOwn(contact, 'telefono'), contact.telefono])
+        } else {
+          await client.query(`INSERT INTO sis_god."CONTACTO" (nombre, parentesco, telefono, id_paciente)
+            VALUES ($1,$2,$3,$4)`, [contact.nombre, contact.parentesco, contact.telefono, id])
+        }
+      }
+      return readPatient(client, id, scope)
+    }, source),
+    deleteContact: (id, contactId, scope) => withTransaction(async client => {
+      const patient = await client.query(`SELECT p.id_paciente FROM sis_god."PACIENTE" p
+        WHERE ${authorized} AND p.id_paciente=$4::bigint FOR UPDATE OF p`, [...scopeValues(scope), id])
+      if (!patient.rowCount) return false
+      const deleted = await client.query(`DELETE FROM sis_god."CONTACTO"
+        WHERE id_contacto=$1 AND id_paciente=$2 RETURNING id_contacto`, [contactId, id])
+      if (!deleted.rowCount) throw contactNotFound()
+      return true
+    }, source),
     createPatient: input => withTransaction(async client => {
       const { rows: [patient] } = await client.query<Patient>(`
         INSERT INTO sis_god."PACIENTE" (tipo_documento, numero_documento, nombres, apellidos,
@@ -72,17 +129,7 @@ export function postgresPatientRepository(source: Pick<Pool, 'query' | 'connect'
       return { ...page, pagina: filters.pagina, limite: filters.limite,
         total_paginas: Math.ceil(page.total / filters.limite) }
     },
-    async findPatient(id, scope) {
-      const { rows } = await source.query<PatientDetail>(`
-        SELECT ${columns}, COALESCE((
-          SELECT jsonb_agg(jsonb_build_object('id_contacto', c.id_contacto::text,
-            'nombre', c.nombre, 'parentesco', c.parentesco, 'telefono', c.telefono) ORDER BY c.id_contacto)
-          FROM sis_god."CONTACTO" c WHERE c.id_paciente = p.id_paciente
-        ), '[]'::jsonb) AS contactos
-        FROM sis_god."PACIENTE" p WHERE ${authorized} AND p.id_paciente = $4::bigint`,
-      [...scopeValues(scope), id])
-      return rows[0] ?? null
-    },
+    findPatient: (id, scope) => readPatient(source, id, scope),
   }
 }
 

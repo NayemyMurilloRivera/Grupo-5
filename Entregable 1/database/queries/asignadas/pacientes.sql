@@ -55,3 +55,45 @@ INSERT INTO sis_god."ANTECEDENTE" (tipo, descripcion, fecha_registro, id_histori
           VALUES ($1,$2,COALESCE($3::date,CURRENT_DATE),$4)
           RETURNING id_antecedente::text, tipo, descripcion, fecha_registro::text;
 COMMIT;
+
+-- Modificación: consultas ejecutadas con el mismo cliente y transacción.
+BEGIN;
+-- Bloqueo: $1 alcance, $2 paciente titular, $3 empleado asignado, $4 paciente consultado.
+SELECT p.id_paciente FROM sis_god."PACIENTE" p
+        WHERE ($1::text = 'global'
+  OR ($1 = 'propio' AND p.id_paciente = $2::bigint)
+  OR ($1 = 'asignado' AND EXISTS (
+    SELECT 1 FROM sis_god."HISTORIA_CLINICA" h
+    JOIN sis_god."PLAN_TRATAMIENTO" plan USING (id_historia)
+    WHERE h.id_paciente = p.id_paciente AND plan.id_odontologo = $3::bigint
+  ))) AND p.id_paciente=$4::bigint FOR UPDATE OF p;
+-- Contactos existentes: $1 paciente, $2 arreglo de identificadores enviados.
+SELECT id_contacto FROM sis_god."CONTACTO"
+          WHERE id_paciente=$1 AND id_contacto=ANY($2::bigint[]) ORDER BY id_contacto FOR UPDATE;
+-- El SET se forma con la lista fija de campos permitidos, con valores parametrizados.
+-- Ejemplo para cambiar solo el teléfono: $1 telefono, $2 id_paciente.
+UPDATE sis_god."PACIENTE" SET telefono=$1 WHERE id_paciente=$2;
+-- Contacto: $1 id_contacto, $2 id_paciente; pares $3/$4, $5/$6 y $7/$8 indican
+-- presencia y valor de nombre, parentesco y telefono, respectivamente.
+UPDATE sis_god."CONTACTO" SET
+            nombre=CASE WHEN $3::boolean THEN $4 ELSE nombre END,
+            parentesco=CASE WHEN $5::boolean THEN $6 ELSE parentesco END,
+            telefono=CASE WHEN $7::boolean THEN $8 ELSE telefono END
+            WHERE id_contacto=$1 AND id_paciente=$2;
+-- Los contactos sin id utilizan el INSERT de CONTACTO documentado en el alta.
+COMMIT;
+
+-- Baja: bloquear al paciente con la consulta anterior antes de eliminar el contacto.
+BEGIN;
+SELECT p.id_paciente FROM sis_god."PACIENTE" p
+        WHERE ($1::text = 'global'
+  OR ($1 = 'propio' AND p.id_paciente = $2::bigint)
+  OR ($1 = 'asignado' AND EXISTS (
+    SELECT 1 FROM sis_god."HISTORIA_CLINICA" h
+    JOIN sis_god."PLAN_TRATAMIENTO" plan USING (id_historia)
+    WHERE h.id_paciente = p.id_paciente AND plan.id_odontologo = $3::bigint
+  ))) AND p.id_paciente=$4::bigint FOR UPDATE OF p;
+-- $1 id_contacto, $2 id_paciente.
+DELETE FROM sis_god."CONTACTO"
+        WHERE id_contacto=$1 AND id_paciente=$2 RETURNING id_contacto;
+COMMIT;

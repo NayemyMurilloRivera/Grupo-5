@@ -71,3 +71,6 @@ export interface CreatedPatient extends PatientDetail {
     antecedentes: Antecedent[]
   }
 }
+
+export type ContactChange = ContactInput | ({ id_contacto: string } & Partial<ContactInput>)
+export type PatientPatch = Partial<Omit<Patient, 'id_paciente'>> & { contactos?: ContactChange[] }

@@ -1,4 +1,4 @@
-import type { PatientFilters, PatientScope, PatientInput } from '../../../domain/pacientes/entities.js'
+import type { PatientFilters, PatientScope, PatientInput, PatientPatch, ContactChange, ContactInput } from '../../../domain/pacientes/entities.js'
 import { invalidPatientInput, patientAccessDenied } from '../../../domain/pacientes/errors.js'
 
 export function patientId(value: unknown, name = 'id'): string {
@@ -115,4 +115,46 @@ export function createPatientInput(value: unknown): PatientInput {
         fecha_registro: calendarDate(record.fecha_registro, 'antecedentes.fecha_registro') }
     }),
   }
+}
+
+export function updatePatientInput(value: unknown): PatientPatch {
+  const data = objectFields(value, ['tipo_documento', 'numero_documento', 'nombres', 'apellidos',
+    'fecha_nacimiento', 'telefono', 'correo', 'direccion', 'contactos'])
+  if (Object.keys(data).length === 0) throw invalidPatientInput('Indique al menos un campo a modificar.')
+  const result: PatientPatch = {}
+  const required = { tipo_documento: 20, numero_documento: 30, nombres: 100, apellidos: 100, telefono: 25 } as const
+  for (const name of Object.keys(required) as (keyof typeof required)[]) {
+    if (Object.hasOwn(data, name)) result[name] = requiredText(data[name], name, required[name])
+  }
+  if (Object.hasOwn(data, 'fecha_nacimiento')) {
+    const date = calendarDate(data.fecha_nacimiento, 'fecha_nacimiento')
+    if (date && date > new Date().toISOString().slice(0, 10)) throw invalidPatientInput('La fecha de nacimiento no puede ser futura.')
+    result.fecha_nacimiento = date
+  }
+  if (Object.hasOwn(data, 'correo')) {
+    const email = nullableText(data.correo, 'correo', 254)?.toLowerCase() ?? null
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw invalidPatientInput('Correo inválido.')
+    result.correo = email
+  }
+  if (Object.hasOwn(data, 'direccion')) result.direccion = nullableText(data.direccion, 'direccion', 250)
+  if (Object.hasOwn(data, 'contactos')) {
+    result.contactos = childRecords(data.contactos, 'contactos', 20).map((value): ContactChange => {
+      const contact = objectFields(value, ['id_contacto', 'nombre', 'parentesco', 'telefono'])
+      const patch: Partial<ContactInput> = {}
+      const fields = { nombre: 150, parentesco: 50, telefono: 25 } as const
+      for (const name of Object.keys(fields) as (keyof typeof fields)[]) {
+        if (Object.hasOwn(contact, name)) patch[name] = requiredText(contact[name], `contactos.${name}`, fields[name])
+      }
+      if (Object.hasOwn(contact, 'id_contacto')) {
+        if (Object.keys(patch).length === 0) throw invalidPatientInput('Indique los datos a modificar del contacto.')
+        return { ...patch, id_contacto: patientId(contact.id_contacto, 'id_contacto') }
+      }
+      return { nombre: requiredText(contact.nombre, 'contactos.nombre', 150),
+        parentesco: requiredText(contact.parentesco, 'contactos.parentesco', 50),
+        telefono: requiredText(contact.telefono, 'contactos.telefono', 25) }
+    })
+    const ids = result.contactos.flatMap(contact => 'id_contacto' in contact ? [contact.id_contacto] : [])
+    if (new Set(ids).size !== ids.length) throw invalidPatientInput('Un contacto no puede aparecer dos veces en la misma modificación.')
+  }
+  return result
 }

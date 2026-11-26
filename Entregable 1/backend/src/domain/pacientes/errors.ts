@@ -18,3 +18,5 @@ export function knownPatientError(error: unknown): PatientError | undefined {
     return invalidPatientInput('La fecha de nacimiento no puede ser futura.')
   }
 }
+
+export const contactNotFound = () => new PatientError(404, 'CONTACTO_NO_EXISTE', 'El contacto no existe o no pertenece al paciente indicado.')
