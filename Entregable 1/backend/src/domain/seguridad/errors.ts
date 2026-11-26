@@ -1,6 +1,6 @@
 import { roleCode, type Role } from './entities.js'
 
-export class SecurityError extends Error {
+export class SecurityError extends Error{
   constructor(readonly status: number, readonly code: string, message: string) {
     super(message)
   }
